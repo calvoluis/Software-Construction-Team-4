@@ -28,7 +28,7 @@ public class SimpleCFGParser {
 			CompilationUnit cu = JavaParser.parse(in);
 			in.close();
 			BlockVisitor blockVisitor = new BlockVisitor();
-			Node result = (Node) blockVisitor.visit(cu, null);
+//			Node result = (Node) blockVisitor.visit(cu, null);
 			this.cfg = blockVisitor.returnCFG(cu, null);
 //			System.out.println("----------Main:\n"+result.toStringWithoutComments()+"\n");
 		} catch (FileNotFoundException e) {
@@ -68,12 +68,21 @@ public class SimpleCFGParser {
 	    			 * if not has children, concatenate
 	    			 * else break
 	    			 */
+	    			if(child.getChildrenNodes().size()==1){
+	    				int begin = child.getBeginLine();
+	    	    		int end = child.getEndLine();
+	    	    		String code = child.toStringWithoutComments();
+	    	    		this.cfg.addNode(begin, end, code);
+	    			}
 	    		}
 	    	}
-	    	else{
-//	    		System.out.println("Looking at a node:\n-Begin:"+n.getBeginLine()+"\n"+n.toStringWithoutComments()+"\n-End:"+n.getEndLine());
-	    		this.cfg.addNode(new CFGNode(n.toStringWithoutComments(), n.getBeginLine()));
-	    	}
+//	    	else{
+////	    		System.out.println("Looking at a node:\n-Begin:"+n.getBeginLine()+"\n"+n.toStringWithoutComments()+"\n-End:"+n.getEndLine());
+//	    		int begin = n.getBeginLine();
+//	    		int end = n.getEndLine();
+//	    		String code = n.toStringWithoutComments();
+//	    		this.cfg.addNode(begin, end, code);
+//	    	}
 	        return super.visit(n, arg);
 //	    	return tempNode;
 	    }
