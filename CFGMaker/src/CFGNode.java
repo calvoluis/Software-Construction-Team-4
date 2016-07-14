@@ -20,11 +20,11 @@ public class CFGNode {
 		return this.idNum;
 	}
 	
-	public int beginLine(){
+	public int getBeginLine(){
 		return this.beginLine;
 	}
 	
-	public int endLine(){
+	public int getEndLine(){
 		return this.endLine;
 	}
 }

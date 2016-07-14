@@ -23,7 +23,9 @@ public class CFG {
 		for(int i=0; i<this.nodes.size(); i++){
 			CFGNode node = this.nodes.get(i);
 			System.out.println("ID: "+node.getIdNum());
-			System.out.println("Code: "+node.getCode()+"\n");
+			System.out.println("Begin: "+node.getBeginLine());
+			System.out.println("Code:\n"+node.getCode());
+			System.out.println("End: "+node.getEndLine()+"\n\n");
 		}
 	}
 }

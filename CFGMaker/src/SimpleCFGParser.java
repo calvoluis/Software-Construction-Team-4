@@ -52,55 +52,42 @@ public class SimpleCFGParser {
 		
 	    @Override
 	    public Object visit(BlockStmt n, Object arg) {
-	        // here you can access the attributes of the method.
-	        // this method will be called for all methods in this 
-	        // CompilationUnit, including inner class methods
-//	    	Node tempNode = returnSimpleStatement(n);
-//	    	System.out.println("-------------Begin: "+tempNode.getBeginLine()+"\n"+tempNode.toStringWithoutComments()+"\n-------------End: "+tempNode.getEndLine());
 	    	List<Node> children = n.getChildrenNodes();
 	    	n.toStringWithoutComments();
+	    	//adds the current BlockStmt's children to the CFG if the children do not have children themselves
 	    	if(children.size()>1){
+	    		String basicBlock = "";
+	    		int basicBlockBegin = -1;
+	    		int basicBlockEnd = -1;
 	    		for(int i=0; i<children.size(); i++){
 	    			Node child = children.get(i);
-//	    			System.out.println("Looking at a child:\n-Begin:"+child.getBeginLine()+"\n"+child.toStringWithoutComments()+"\n-End:"+child.getEndLine());
-	    			/* check if child has children */
-	    			/* check child for children
-	    			 * if not has children, concatenate
-	    			 * else break
-	    			 */
+	    			int begin = child.getBeginLine();
+    	    		int end = child.getEndLine();
+    	    		String code = child.toStringWithoutComments();
 	    			if(child.getChildrenNodes().size()==1){
-	    				int begin = child.getBeginLine();
-	    	    		int end = child.getEndLine();
-	    	    		String code = child.toStringWithoutComments();
-	    	    		this.cfg.addNode(begin, end, code);
+	    				if(basicBlockBegin==-1){
+	    					basicBlockBegin = begin;
+	    					basicBlockEnd = end;
+	    					basicBlock += code+"\n";
+	    				}
+	    				else{
+	    					basicBlockEnd = end;
+	    					basicBlock += code+"\n";
+	    					this.cfg.addNode(basicBlockBegin, basicBlockEnd, basicBlock);
+	    					basicBlock = "";
+	    		    		basicBlockBegin = -1;
+	    		    		basicBlockEnd = -1;
+	    				}
+//	    	    		this.cfg.addNode(begin, end, code);
 	    			}
 	    		}
 	    	}
-//	    	else{
-////	    		System.out.println("Looking at a node:\n-Begin:"+n.getBeginLine()+"\n"+n.toStringWithoutComments()+"\n-End:"+n.getEndLine());
-//	    		int begin = n.getBeginLine();
-//	    		int end = n.getEndLine();
-//	    		String code = n.toStringWithoutComments();
-//	    		this.cfg.addNode(begin, end, code);
-//	    	}
 	        return super.visit(n, arg);
-//	    	return tempNode;
 	    }
 
 		public CFG returnCFG(CompilationUnit cu, Object arg){
 	    	visit(cu, arg);
 	    	return this.cfg;
 	    }
-	    
-//	    private Node returnSimpleStatement(Node n){
-//	    	List<Node> children = n.getChildrenNodes();
-//	    	if(children.size()>1){
-//	    		for(int i=0; i<children.size(); i++){
-//	    			Node child = children.get(i);
-//	    			return returnSimpleStatement(child);
-//	    		}
-//	    	}
-//	    	return n;
-//	    }
 	}
 }
