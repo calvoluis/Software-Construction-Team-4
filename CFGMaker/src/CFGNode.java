@@ -1,12 +1,12 @@
 
 public class CFGNode {
-	private int idNum;
+	private String nodeId;
 	private int beginLine;
 	private int endLine;
 	private String representedCode;
 	
-	public CFGNode(int id, int begin, int end, String code){
-		this.idNum = id;
+	public CFGNode(int begin, int end, String id, String code){
+		this.nodeId = id;
 		this.beginLine = begin;
 		this.endLine = end;
 		this.representedCode = code;
@@ -16,8 +16,8 @@ public class CFGNode {
 		return this.representedCode;
 	}
 	
-	public int getIdNum(){
-		return this.idNum;
+	public String getIdNum(){
+		return this.nodeId;
 	}
 	
 	public int getBeginLine(){

@@ -10,8 +10,8 @@ public class CFG {
 		this.edges = new LinkedList<CFGEdge>();
 	}
 	
-	public boolean addNode(int begin, int end, String code){
-		CFGNode node = new CFGNode(begin, begin, end, code);
+	public boolean addNode(int begin, int end, String nodeId, String code){
+		CFGNode node = new CFGNode(begin, end, nodeId, code);
 		return this.nodes.add(node);
 	}
 	

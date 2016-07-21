@@ -8,9 +8,16 @@ import com.github.javaparser.ParseException;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.stmt.BlockStmt;
+import com.github.javaparser.ast.stmt.CatchClause;
+import com.github.javaparser.ast.stmt.DoStmt;
 import com.github.javaparser.ast.stmt.ExpressionStmt;
+import com.github.javaparser.ast.stmt.ForStmt;
+import com.github.javaparser.ast.stmt.ForeachStmt;
 import com.github.javaparser.ast.stmt.IfStmt;
 import com.github.javaparser.ast.stmt.Statement;
+import com.github.javaparser.ast.stmt.SwitchEntryStmt;
+import com.github.javaparser.ast.stmt.SwitchStmt;
+import com.github.javaparser.ast.stmt.TryStmt;
 import com.github.javaparser.ast.visitor.GenericVisitorAdapter;
 
 public class SimpleCFGParser {
@@ -102,37 +109,112 @@ public class SimpleCFGParser {
 //	    	}
 	    	int begin = -1;
 	    	int end = -1;
+	    	String nodeId = "";
 	    	String code = "";
 	    	boolean newNodeMade = false;
 	    	for(int i=0; i<children.size(); i++){
 	    		Node child = children.get(i);
+	    		int childBegin = child.getBeginLine();
+	    		int childEnd = child.getEndLine();
+	    		String childId = Integer.toString(childBegin);
+	    		String childCode = child.toStringWithoutComments();
+	    		
 	    		System.out.println("Child begin: "+child.getBeginLine()+" Class: "+child.getClass());
+	    		
 	    		if(child instanceof ExpressionStmt){
 		    		if(begin == -1){
-		    			begin = child.getBeginLine();
+		    			begin = childBegin;
 		    		}
-		    		end = child.getEndLine();
-		    		code += child.toStringWithoutComments()+"\n";
+		    		end = childEnd;
+		    		nodeId += childId+" ";
+		    		code += childCode+"\n";
 	    		}
 	    		else if(child instanceof IfStmt){
 	    			if(code!=""){
-		    			this.cfg.addNode(begin, end, code);
-		    			this.cfg.addNode(child.getBeginLine(), child.getEndLine(), "if("+((IfStmt) child).getCondition().toStringWithoutComments()+")");
-		    			begin = -1;
-		    			end = -1;
-		    			code = "";
+		    			addNode(begin, end, nodeId, code);
 	    			}
+	    			String condition = ((IfStmt) child).getCondition().toStringWithoutComments();
+    				addNode(childBegin, childEnd, childId, "if("+condition+")");
+	    			begin = -1;
+	    			end = -1;
+	    			code = "";
 	    		}
-	    		else{
+	    		else if(child instanceof DoStmt){
 	    			if(code!=""){
-		    			this.cfg.addNode(begin, end, code);
-		    			begin = -1;
-		    			end = -1;
-		    			code = "";
+	    				addNode(begin, end, nodeId, code);
 	    			}
+	    			String condition = ((DoStmt) child).getCondition().toStringWithoutComments();
+	    			addNode(childBegin, childEnd, childId, "do{...}while("+condition+");");
+	    			begin = -1;
+	    			end = -1;
+	    			code = "";
 	    		}
+	    		else if(child instanceof ForStmt){
+	    			if(code!=""){
+	    				addNode(begin, end, nodeId, code);
+	    			}
+	    			String condition = ((ForStmt) child).getCompare().toStringWithoutComments();
+	    			addNode(childBegin, childEnd, childId, "for("+condition+")");
+	    			begin = -1;
+	    			end = -1;
+	    			code = "";
+	    		}
+	    		else if(child instanceof ForeachStmt){
+	    			if(code!=""){
+	    				addNode(begin, end, nodeId, code);
+	    			}
+	    			String condition = ((ForeachStmt) child).getIterable().toStringWithoutComments();
+	    			addNode(childBegin, childEnd, childId, "foreach("+condition+")");
+	    			begin = -1;
+	    			end = -1;
+	    			code = "";
+	    		}
+	    		else if(child instanceof SwitchStmt){
+	    			if(code!=""){
+	    				addNode(begin, end, nodeId, code);
+	    			}
+	    			String condition = ((SwitchStmt) child).getSelector().toStringWithoutComments();
+	    			addNode(childBegin, childEnd, childId, "switch("+condition+")");
+	    			begin = -1;
+	    			end = -1;
+	    			code = "";
+	    		}
+	    		else if(child instanceof SwitchEntryStmt){
+	    			if(code!=""){
+	    				addNode(begin, end, nodeId, code);
+	    			}
+	    			String condition = ((SwitchEntryStmt) child).getLabel().toStringWithoutComments();
+	    			addNode(childBegin, childEnd, childId, "case "+condition+":");
+	    			begin = -1;
+	    			end = -1;
+	    			code = "";
+	    		}
+	    		else if(child instanceof TryStmt){
+	    			if(code!=""){
+	    				addNode(begin, end, nodeId, code);
+	    			}
+	    			addNode(childBegin, childEnd, childId, "try");
+	    			begin = -1;
+	    			end = -1;
+	    			code = "";
+	    		}
+	    		else if(child instanceof CatchClause){
+	    			if(code!=""){
+	    				addNode(begin, end, nodeId, code);
+	    			}
+	    			String parameters = ((CatchClause) child).getParam().toStringWithoutComments();
+	    			addNode(childBegin, childEnd, childId, "catch("+parameters+")");
+	    			begin = -1;
+	    			end = -1;
+	    			code = "";
+	    		}
+	    		
 	    	}
 	        return super.visit(n, arg);
+	    }
+	    
+	    private void addNode(int begin, int end, String nodeId, String code){
+	    	this.cfg.addNode(begin, end, nodeId, code);
 	    }
 
 		public CFG returnCFG(CompilationUnit cu, Object arg){
