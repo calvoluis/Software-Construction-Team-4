@@ -159,4 +159,10 @@ public class OverlappingRectangles {
 	        }
 	    }
 	}
+	public BigInteger modInverse(BigInteger m) {
+	  if (m.signum <= 0)
+	    throw new ArithmeticException("Modulus not positive: " + m);
+	  assert this.multiply(result).mod(m).equals(ONE) : this;
+	  return result;
+	}
 }
