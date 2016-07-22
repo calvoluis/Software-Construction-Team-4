@@ -7,6 +7,7 @@ import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseException;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
+import com.github.javaparser.ast.stmt.AssertStmt;
 import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.CatchClause;
 import com.github.javaparser.ast.stmt.DoStmt;
@@ -65,54 +66,10 @@ public class SimpleCFGParser {
 	    	List<Node> children = n.getChildrenNodes();
 	    	System.out.println("Looking at: "+n.getBeginLine()+"     Children: "+children.size()+"\n"+n.toString()+"\n");
 	    	//adds the current BlockStmt's children to the CFG if the children do not have children themselves
-//	    	if(children.size()>1){
-//	    		String basicBlock = "";
-//	    		int basicBlockBegin = -1;
-//	    		int basicBlockEnd = -1;
-//	    		boolean newBlockNeeded = false;
-//	    		for(int i=0; i<children.size(); i++){
-//	    			Node child = children.get(i);
-//	    			int begin = child.getBeginLine();
-//    	    		int end = child.getEndLine();
-//    	    		String code = child.toStringWithoutComments();
-//	    			if(child.getChildrenNodes().size()==1){
-////	    				if(basicBlockBegin==-1){
-////	    					basicBlockBegin = begin;
-////	    					basicBlockEnd = end;
-////	    					basicBlock += code+"\n";
-////	    				}
-////	    				else{
-////	    					basicBlockEnd = end;
-////	    					basicBlock += code+"\n";
-////	    					this.cfg.addNode(basicBlockBegin, basicBlockEnd, basicBlock);
-////	    					basicBlock = "";
-////	    		    		basicBlockBegin = -1;
-////	    		    		basicBlockEnd = -1;
-////	    				}
-////	    	    		this.cfg.addNode(begin, end, code);
-////	    				System.out.println("Line: "+child.getBeginLine()+" "+child.getClass());
-////	    				basicBlockBegin = begin;
-//	    				if(basicBlockBegin == -1){
-//	    					basicBlockBegin = begin;
-//	    				}
-//    					basicBlockEnd = end;
-//    					basicBlock += code+"\n";
-//	    			}
-//	    			else{
-//	    				if(basicBlock != ""){
-//		    				this.cfg.addNode(basicBlockBegin, basicBlockEnd, basicBlock);
-//		    				basicBlock = "";
-//	    		    		basicBlockBegin = -1;
-//	    		    		basicBlockEnd = -1;
-//	    				}
-//	    			}
-//	    		}
-//	    	}
 	    	int begin = -1;
 	    	int end = -1;
 	    	String nodeId = "";
 	    	String code = "";
-	    	boolean newNodeMade = false;
 	    	for(int i=0; i<children.size(); i++){
 	    		Node child = children.get(i);
 	    		int childBegin = child.getBeginLine();
@@ -120,7 +77,7 @@ public class SimpleCFGParser {
 	    		String childId = Integer.toString(childBegin);
 	    		String childCode = child.toStringWithoutComments();
 	    		
-	    		System.out.println("Child begin: "+child.getBeginLine()+" Class: "+child.getClass());
+	    		System.out.println("Child begin: "+child.getBeginLine()+" Class: "+child.getClass().getSimpleName());
 	    		
 	    		if(child instanceof ExpressionStmt){
 		    		if(begin == -1){
@@ -147,6 +104,7 @@ public class SimpleCFGParser {
 	    	int childBegin = child.getBeginLine();
     		int childEnd = child.getEndLine();
     		String childId = Integer.toString(childBegin);
+    		
 	    	if(child instanceof IfStmt){
     			String condition = ((IfStmt) child).getCondition().toStringWithoutComments();
 				addNode(childBegin, childEnd, childId, "if("+condition+")");
@@ -172,6 +130,7 @@ public class SimpleCFGParser {
     			addNode(childBegin, childEnd, childId, "switch("+condition+")");
     		}
     		else if(child instanceof SwitchEntryStmt){
+    			System.out.println("-------------------------SWITCH ENTRY STATEMENT FOUND");
     			String condition = ((SwitchEntryStmt) child).getLabel().toStringWithoutComments();
     			addNode(childBegin, childEnd, childId, "case "+condition+":");
     		}
@@ -181,6 +140,14 @@ public class SimpleCFGParser {
     		else if(child instanceof CatchClause){
     			String parameters = ((CatchClause) child).getParam().toStringWithoutComments();
     			addNode(childBegin, childEnd, childId, "catch("+parameters+")");
+    		}
+    		else if(child instanceof AssertStmt){
+    			String check = ((AssertStmt) child).toStringWithoutComments();
+    			addNode(childBegin, childEnd, childId, check);
+    		}
+    		else if(child instanceof AssertStmt){
+    			String check = ((AssertStmt) child).toStringWithoutComments();
+    			addNode(childBegin, childEnd, childId, check);
     		}
 	    }
 	    
