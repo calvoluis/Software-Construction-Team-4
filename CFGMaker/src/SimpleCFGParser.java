@@ -7,18 +7,26 @@ import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseException;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
+import com.github.javaparser.ast.comments.Comment;
+import com.github.javaparser.ast.comments.LineComment;
+import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.stmt.AssertStmt;
 import com.github.javaparser.ast.stmt.BlockStmt;
+import com.github.javaparser.ast.stmt.BreakStmt;
 import com.github.javaparser.ast.stmt.CatchClause;
+import com.github.javaparser.ast.stmt.ContinueStmt;
 import com.github.javaparser.ast.stmt.DoStmt;
+import com.github.javaparser.ast.stmt.EmptyStmt;
 import com.github.javaparser.ast.stmt.ExpressionStmt;
 import com.github.javaparser.ast.stmt.ForStmt;
 import com.github.javaparser.ast.stmt.ForeachStmt;
 import com.github.javaparser.ast.stmt.IfStmt;
+import com.github.javaparser.ast.stmt.LabeledStmt;
 import com.github.javaparser.ast.stmt.ReturnStmt;
 import com.github.javaparser.ast.stmt.Statement;
 import com.github.javaparser.ast.stmt.SwitchEntryStmt;
 import com.github.javaparser.ast.stmt.SwitchStmt;
+import com.github.javaparser.ast.stmt.ThrowStmt;
 import com.github.javaparser.ast.stmt.TryStmt;
 import com.github.javaparser.ast.stmt.WhileStmt;
 import com.github.javaparser.ast.visitor.GenericVisitorAdapter;
@@ -81,6 +89,15 @@ public class SimpleCFGParser {
 	    		isConditional = isConditional || child instanceof WhileStmt;
 	    		isConditional = isConditional || child instanceof SwitchStmt;
 	    		
+	    		boolean isCtrlFlowBreak = child instanceof TryStmt;
+	    		isCtrlFlowBreak = isCtrlFlowBreak || child instanceof CatchClause;
+	    		isCtrlFlowBreak = isCtrlFlowBreak || child instanceof AssertStmt;
+	    		isCtrlFlowBreak = isCtrlFlowBreak || child instanceof ContinueStmt;
+	    		isCtrlFlowBreak = isCtrlFlowBreak || child instanceof LabeledStmt;
+	    		isCtrlFlowBreak = isCtrlFlowBreak || child instanceof ReturnStmt;
+	    		isCtrlFlowBreak = isCtrlFlowBreak || child instanceof BreakStmt;
+	    		isCtrlFlowBreak = isCtrlFlowBreak || child instanceof ThrowStmt;
+	    		
 	    		int childBegin = child.getBeginLine();
 	    		int childEnd = child.getEndLine();
 	    		String childId = Integer.toString(childBegin);
@@ -98,6 +115,24 @@ public class SimpleCFGParser {
 	    			begin = -1;
 	    			end = -1;
 	    			code = "";
+	    		}
+	    		else if(isCtrlFlowBreak){
+	    			if(code!=""){
+		    			addNode(begin, end, nodeId, code);
+		    			System.out.println("ADDED BASIC BLOCK "+nodeId);
+	    			}
+	    			handleBreaks(child);
+	    			System.out.println("ADDED CONDITIONAL "+childId);
+	    			begin = -1;
+	    			end = -1;
+	    			code = "";
+	    		}
+	    		else if(child instanceof EmptyStmt || child instanceof Comment){
+	    			if(begin == -1){
+		    			begin = childBegin;
+		    		}
+		    		end = childEnd;
+		    		nodeId += childId+" ";
 	    		}
 	    		else{
 	    			if(i==children.size()-1){
@@ -117,7 +152,32 @@ public class SimpleCFGParser {
 	        return super.visit(n, arg);
 	    }
 	    
-	    private void handleConditionals(Node child){
+	    private void handleBreaks(Node child){
+	    	int childBegin = child.getBeginLine();
+    		int childEnd = child.getEndLine();
+    		String childId = Integer.toString(childBegin);
+    		
+    		if(child instanceof AssertStmt){
+	    		String condition = ((AssertStmt) child).toStringWithoutComments();
+    			childEnd = ((AssertStmt) child).getEndLine();
+				addNode(childBegin, childEnd, childId, condition);
+    		}
+    		else if(child instanceof BreakStmt){
+    			addNode(childBegin, childEnd, childId, "break;");
+    		}
+    		else if(child instanceof TryStmt){
+    			addNode(childBegin, childEnd, childId, "try");
+    		}
+    		else if(child instanceof CatchClause){
+    			String parameters = ((CatchClause) child).getParam().toStringWithoutComments();
+    			addNode(childBegin, childEnd, childId, "catch("+parameters+")");
+    		}
+    		else if(child instanceof ContinueStmt){
+    			addNode(childBegin, childEnd, childId, "continue");
+    		}
+		}
+
+		private void handleConditionals(Node child){
 	    	int childBegin = child.getBeginLine();
     		int childEnd = child.getEndLine();
     		String childId = Integer.toString(childBegin);
@@ -126,7 +186,6 @@ public class SimpleCFGParser {
 	    		String condition = ((IfStmt) child).getCondition().toStringWithoutComments();
     			childEnd = ((IfStmt) child).getCondition().getEndLine();
 				addNode(childBegin, childEnd, childId, "if("+condition+")");
-				/////////
     		}
     		else if(child instanceof DoStmt){
     			String condition = ((DoStmt) child).getCondition().toStringWithoutComments();
@@ -134,7 +193,17 @@ public class SimpleCFGParser {
     		}
     		else if(child instanceof ForStmt){
     			String condition = ((ForStmt) child).getCompare().toStringWithoutComments();
-    			addNode(childBegin, childEnd, childId, "for("+condition+")");
+    			String initializations = "";
+    			List<Expression> initList = ((ForStmt) child).getInit();
+    			for(Expression initialization : initList){
+    				initializations+=initialization.toStringWithoutComments();
+    			}
+    			String updates = "";
+    			List<Expression> updatesList = ((ForStmt) child).getUpdate();
+    			for(Expression update : updatesList){
+    				updates+=update.toStringWithoutComments();
+    			}
+    			addNode(childBegin, childEnd, childId, "for("+initializations+"; "+condition+"; "+updates+")");
     		}
     		else if(child instanceof ForeachStmt){
     			String condition = ((ForeachStmt) child).getIterable().toStringWithoutComments();
@@ -153,13 +222,6 @@ public class SimpleCFGParser {
     			System.out.println("-------------------------SWITCH ENTRY STATEMENT FOUND");
     			String condition = ((SwitchEntryStmt) child).getLabel().toStringWithoutComments();
     			addNode(childBegin, childEnd, childId, "case "+condition+":");
-    		}
-    		else if(child instanceof TryStmt){
-    			addNode(childBegin, childEnd, childId, "try");
-    		}
-    		else if(child instanceof CatchClause){
-    			String parameters = ((CatchClause) child).getParam().toStringWithoutComments();
-    			addNode(childBegin, childEnd, childId, "catch("+parameters+")");
     		}
 	    }
 	    

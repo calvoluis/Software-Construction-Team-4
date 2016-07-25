@@ -6,10 +6,10 @@ public class CFGNode {
 	private String representedCode;
 	
 	public CFGNode(int begin, int end, String id, String code){
-		this.nodeId = id;
+		this.nodeId = id.trim();
 		this.beginLine = begin;
 		this.endLine = end;
-		this.representedCode = code;
+		this.representedCode = code.trim();
 	}
 	
 	public String getCode(){
