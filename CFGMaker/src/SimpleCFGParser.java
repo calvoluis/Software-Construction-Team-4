@@ -126,6 +126,7 @@ public class SimpleCFGParser {
 	    		String condition = ((IfStmt) child).getCondition().toStringWithoutComments();
     			childEnd = ((IfStmt) child).getCondition().getEndLine();
 				addNode(childBegin, childEnd, childId, "if("+condition+")");
+				/////////
     		}
     		else if(child instanceof DoStmt){
     			String condition = ((DoStmt) child).getCondition().toStringWithoutComments();
