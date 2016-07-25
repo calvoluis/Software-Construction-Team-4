@@ -1,8 +1,9 @@
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import com.thoughtworks.xstream.XStream;
 
 public class CFGMaker {
 
@@ -28,10 +29,37 @@ public class CFGMaker {
 				simpleParser.parse();
 				CFG simpleCFG = simpleParser.getCFG();
 				simpleCFG.printNodes();
+				saveCFG(simpleCFG);
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		//loadCFG();
 	}
+	
+	
+	public static void saveCFG(CFG cfg){
+		XStream xstream=new XStream();
+		String xml = xstream.toXML(cfg);
+		System.out.println(xml);
+		try{
+			FileWriter out = new FileWriter("cfg.xml");
+			out.write(xml);
+			out.flush();
+			out.close();
+		}
+		catch (IOException e){
+			e.printStackTrace();
+		}
+	}
+	
+	
+//	public static void loadCFG() {
+//		File file = new File("E:\\USB BACKUP\\Semester 1\\java work and notes\\xstream.xml");
+//		XStream xstream = new XStream();
+//		CFG yourData=(CFG)xstream.fromXML(file);
+//		yourData.printNodes();	
+//	}
+
 
 }
