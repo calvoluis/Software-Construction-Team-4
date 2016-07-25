@@ -15,6 +15,7 @@ import com.github.javaparser.ast.stmt.ExpressionStmt;
 import com.github.javaparser.ast.stmt.ForStmt;
 import com.github.javaparser.ast.stmt.ForeachStmt;
 import com.github.javaparser.ast.stmt.IfStmt;
+import com.github.javaparser.ast.stmt.ReturnStmt;
 import com.github.javaparser.ast.stmt.Statement;
 import com.github.javaparser.ast.stmt.SwitchEntryStmt;
 import com.github.javaparser.ast.stmt.SwitchStmt;
@@ -64,7 +65,7 @@ public class SimpleCFGParser {
 	    @Override
 	    public Object visit(BlockStmt n, Object arg) {
 	    	List<Node> children = n.getChildrenNodes();
-	    	System.out.println("Looking at: "+n.getBeginLine()+"     Children: "+children.size()+"\n"+n.toString()+"\n");
+	    	System.out.println("Looking at: "+n.getBeginLine()+"     Children: "+children.size()+"\n");
 	    	//adds the current BlockStmt's children to the CFG if the children do not have children themselves
 	    	int begin = -1;
 	    	int end = -1;
@@ -72,29 +73,45 @@ public class SimpleCFGParser {
 	    	String code = "";
 	    	for(int i=0; i<children.size(); i++){
 	    		Node child = children.get(i);
+	    		
+	    		boolean isConditional = child instanceof IfStmt;
+	    		isConditional = isConditional || child instanceof DoStmt;
+	    		isConditional = isConditional || child instanceof ForStmt;
+	    		isConditional = isConditional || child instanceof ForeachStmt;
+	    		isConditional = isConditional || child instanceof WhileStmt;
+	    		isConditional = isConditional || child instanceof SwitchStmt;
+	    		
 	    		int childBegin = child.getBeginLine();
 	    		int childEnd = child.getEndLine();
 	    		String childId = Integer.toString(childBegin);
 	    		String childCode = child.toStringWithoutComments();
 	    		
-	    		System.out.println("Child begin: "+child.getBeginLine()+" Class: "+child.getClass().getSimpleName());
+	    		System.out.println("Child begin: "+childBegin+" Class: "+child.getClass().getSimpleName());
 	    		
-	    		if(child instanceof ExpressionStmt){
-		    		if(begin == -1){
-		    			begin = childBegin;
-		    		}
-		    		end = childEnd;
-		    		nodeId += childId+" ";
-		    		code += childCode+"\n";
-	    		}
-	    		else{
+	    		if(isConditional){
 	    			if(code!=""){
 		    			addNode(begin, end, nodeId, code);
+		    			System.out.println("ADDED BASIC BLOCK "+nodeId);
 	    			}
 	    			handleConditionals(child);
+	    			System.out.println("ADDED CONDITIONAL "+childId);
 	    			begin = -1;
 	    			end = -1;
 	    			code = "";
+	    		}
+	    		else{
+	    			if(i==children.size()-1){
+	    				addNode(childBegin, childEnd, childId, childCode);
+	    				System.out.println("ADDED NON CONDITIONAL "+childId);
+	    			}
+	    			else{
+			    		if(begin == -1){
+			    			begin = childBegin;
+			    		}
+			    		end = childEnd;
+			    		nodeId += childId+" ";
+			    		code += childCode+"\n";
+	    			}
 	    		}
 	    	}
 	        return super.visit(n, arg);
@@ -106,7 +123,8 @@ public class SimpleCFGParser {
     		String childId = Integer.toString(childBegin);
     		
 	    	if(child instanceof IfStmt){
-    			String condition = ((IfStmt) child).getCondition().toStringWithoutComments();
+	    		String condition = ((IfStmt) child).getCondition().toStringWithoutComments();
+    			childEnd = ((IfStmt) child).getCondition().getEndLine();
 				addNode(childBegin, childEnd, childId, "if("+condition+")");
     		}
     		else if(child instanceof DoStmt){
@@ -127,6 +145,7 @@ public class SimpleCFGParser {
     		}
     		else if(child instanceof SwitchStmt){
     			String condition = ((SwitchStmt) child).getSelector().toStringWithoutComments();
+    			List<SwitchEntryStmt> entryStmts = ((SwitchStmt) child).getEntries();
     			addNode(childBegin, childEnd, childId, "switch("+condition+")");
     		}
     		else if(child instanceof SwitchEntryStmt){
@@ -140,14 +159,6 @@ public class SimpleCFGParser {
     		else if(child instanceof CatchClause){
     			String parameters = ((CatchClause) child).getParam().toStringWithoutComments();
     			addNode(childBegin, childEnd, childId, "catch("+parameters+")");
-    		}
-    		else if(child instanceof AssertStmt){
-    			String check = ((AssertStmt) child).toStringWithoutComments();
-    			addNode(childBegin, childEnd, childId, check);
-    		}
-    		else if(child instanceof AssertStmt){
-    			String check = ((AssertStmt) child).toStringWithoutComments();
-    			addNode(childBegin, childEnd, childId, check);
     		}
 	    }
 	    
