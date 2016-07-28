@@ -24,7 +24,7 @@ import com.github.javaparser.ast.stmt.TryStmt;
 import com.github.javaparser.ast.stmt.WhileStmt;
 import com.github.javaparser.ast.visitor.GenericVisitorAdapter;
 
-public class Visitor extends GenericVisitorAdapter<Object, Object> {
+public class SimpleVisitor extends GenericVisitorAdapter<Object, Object> {
 	private CFG cfg = new CFG();
 	
     @Override

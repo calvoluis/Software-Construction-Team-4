@@ -21,7 +21,7 @@ public class SimpleCFGParser {
 			in = new FileInputStream(this.file);
 			CompilationUnit cu = JavaParser.parse(in);
 			in.close();
-			Visitor blockVisitor = new Visitor();
+			SimpleVisitor blockVisitor = new SimpleVisitor();
 			this.cfg = blockVisitor.returnCFG(cu, null);
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
