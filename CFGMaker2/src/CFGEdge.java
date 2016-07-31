@@ -4,8 +4,8 @@ public class CFGEdge {
 	private String toNode;
 	
 	public CFGEdge(String from, String to){
-		this.fromNode = from;
-		this.toNode = to;
+		this.fromNode = from.trim();
+		this.toNode = to.trim();
 	}
 	
 	public String getFromNode(){
