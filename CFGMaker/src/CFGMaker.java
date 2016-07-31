@@ -26,10 +26,16 @@ public class CFGMaker {
 			} while(!fileFound);
 			if(fileFound){
 				SimpleCFGParser simpleParser = new SimpleCFGParser(fileName);
-				simpleParser.parse();
-				CFG simpleCFG = simpleParser.getCFG();
-				simpleCFG.printNodes();
-				saveCFG(simpleCFG);
+//				simpleParser.parse();
+//				CFG simpleCFG = simpleParser.getCFG();
+//				simpleCFG.printNodes();
+				
+				MultiCondCFGParser multicondParser = new MultiCondCFGParser(fileName);
+				multicondParser.parse();
+				CFG multiCFG = multicondParser.getCFG();
+				multiCFG.printNodes();
+				
+//				saveCFG(simpleCFG);
 			}
 		} catch (IOException e) {
 			e.printStackTrace();

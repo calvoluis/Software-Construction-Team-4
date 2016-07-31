@@ -3,6 +3,7 @@ import java.util.List;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.comments.Comment;
+import com.github.javaparser.ast.expr.BinaryExpr;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.stmt.AssertStmt;
 import com.github.javaparser.ast.stmt.BlockStmt;
@@ -30,7 +31,7 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
     @Override
     public Object visit(BlockStmt n, Object arg) {
     	List<Node> children = n.getChildrenNodes();
-    	System.out.println("Looking at: "+n.getBeginLine()+"     Children: "+children.size()+"\n");
+    	System.out.println("BlockStmt Visitor Looking at: "+n.getBegin().line+"     Children: "+children.size()+"\n");
     	//adds the current BlockStmt's children to the CFG if the children do not have children themselves
     	int begin = -1;
     	int end = -1;
@@ -55,12 +56,12 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
     		isCtrlFlowBreak = isCtrlFlowBreak || child instanceof BreakStmt;
     		isCtrlFlowBreak = isCtrlFlowBreak || child instanceof ThrowStmt;
     		
-    		int childBegin = child.getBeginLine();
-    		int childEnd = child.getEndLine();
+    		int childBegin = child.getBegin().line;
+    		int childEnd = child.getBegin().line;
     		String childId = Integer.toString(childBegin);
     		String childCode = child.toStringWithoutComments();
     		
-    		System.out.println("Child begin: "+childBegin+" Class: "+child.getClass().getSimpleName());
+//    		System.out.println("Child begin: "+childBegin+" Class: "+child.getClass().getSimpleName());
     		
     		if(isConditional){
     			if(code!=""){
@@ -110,15 +111,15 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
     }
     
     @Override
-    public Object visit(SwitchStmt s, Object arg){
+    public Object visit(SwitchEntryStmt s, Object arg){
     	List<Node> children = s.getChildrenNodes();
-    	System.out.println("Looking at: "+s.getBeginLine()+"     Children: "+children.size()+"\n");
+    	System.out.println("\nSwitch Visitor Looking at: "+s.getBegin().line+"     Children: "+children.size());
     	
     	for(int i=0; i<children.size(); i++){
     		Node child = children.get(i);
     		
-    		int childBegin = child.getBeginLine();
-    		int childEnd = child.getEndLine();
+    		int childBegin = child.getBegin().line;
+    		int childEnd = child.getEnd().line;
     		String childId = Integer.toString(childBegin);
     		String childCode = child.toStringWithoutComments();
     		
@@ -127,15 +128,34 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
     	
     	return super.visit(s, arg);
     }
+
+    @Override
+    public Object visit(BinaryExpr e, Object arg){
+    	List<Node> children = e.getChildrenNodes();
+    	System.out.println("BinaryExpr Visitor Looking at: "+e.getBegin().line+"     Children: "+children.size()+"\n");
+    	
+    	for(int i=0; i<children.size(); i++){
+    		Node child = children.get(i);
+    		
+    		int childBegin = child.getBegin().line;
+    		int childEnd = child.getEnd().line;
+    		String childId = Integer.toString(childBegin);
+    		String childCode = child.toStringWithoutComments();
+    		
+    		System.out.println("Child begin: "+childBegin+" Class: "+child.getClass().getSimpleName());
+    	}
+    	
+    	return super.visit(e, arg);
+    }
     
     private void handleBreaks(Node child){
-    	int childBegin = child.getBeginLine();
-		int childEnd = child.getEndLine();
+    	int childBegin = child.getBegin().line;
+		int childEnd = child.getEnd().line;
 		String childId = Integer.toString(childBegin);
 		
 		if(child instanceof AssertStmt){
     		String condition = ((AssertStmt) child).toStringWithoutComments();
-			childEnd = ((AssertStmt) child).getEndLine();
+			childEnd = ((AssertStmt) child).getEnd().line;
 			addNode(childBegin, childEnd, childId, condition);
 		}
 		else if(child instanceof BreakStmt){
@@ -158,28 +178,44 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
 	}
 
 	private void handleConditionals(Node child){
-    	int childBegin = child.getBeginLine();
-		int childEnd = child.getEndLine();
+    	int childBegin = child.getBegin().line;
+		int childEnd = child.getEnd().line;
 		String childId = Integer.toString(childBegin);
 				
     	if(child instanceof IfStmt){
-    		String condition = ((IfStmt) child).getCondition().toStringWithoutComments();
-			childEnd = ((IfStmt) child).getCondition().getEndLine();
-			if(condition.contains("||")){
-				System.out.println("OR Found in IF stmt");
-				String[] children = condition.split("[|]");
-				addNode(childBegin,childEnd,childId+"A","if("+children[0]+"||");
-				addNode(childBegin,childEnd,childId+"B",children[2]+")");
-			}
-			else if(condition.contains("&&")){
-				System.out.println("AND Found in if stmt");
-				String[] children = condition.split("[&]");
-				addNode(childBegin,childEnd,childId+"A","if("+children[0]+"&&");
-				addNode(childBegin,childEnd,childId+"B",children[2]+")");
-			}
-			else{
-				addNode(childBegin, childEnd, childId, "if("+condition+")");
-			}
+    		Expression ifExpr = ((IfStmt) child).getCondition();
+    		System.out.println("If Statement class: "+ifExpr.getClass().getSimpleName());
+    		if(ifExpr instanceof BinaryExpr){
+    			BinaryExpr binIfExpr = ((BinaryExpr) ifExpr);
+    			if(binIfExpr.getOperator()==BinaryExpr.Operator.and){
+    				System.out.println("FOUND AN &&");
+    				System.out.println("Class of left side: "+binIfExpr.getLeft().getClass().getSimpleName());
+    			}
+    			else if(binIfExpr.getOperator()==BinaryExpr.Operator.or){
+    				System.out.println("FOUND AN ||");
+    			}
+//    			System.out.println("If Expression Children: "+ifExpr.getChildrenNodes().size());
+    			System.out.println("if("+binIfExpr.getOperator().toString());
+    		}
+//    		String condition = ifExpr.toStringWithoutComments();
+//			childEnd = ifExpr.getEnd().line;
+			
+//			if(condition.contains("||")){
+//				System.out.println("OR Found in IF stmt");
+//				String[] children = condition.split("[|]");
+//				addNode(childBegin,childEnd,childId+"A","if("+children[0]+"||");
+//				addNode(childBegin,childEnd,childId+"B",children[2]+")");
+//			}
+//			else if(condition.contains("&&")){
+//				System.out.println("AND Found in if stmt");
+//				String[] children = condition.split("[&]");
+//				addNode(childBegin,childEnd,childId+"A","if("+children[0]+"&&");
+//				addNode(childBegin,childEnd,childId+"B",children[2]+")");
+//			}
+			
+//			else{
+//				addNode(childBegin, childEnd, childId, "if("+condition+")");
+//			}
 		}
 		else if(child instanceof DoStmt){
 			String condition = ((DoStmt) child).getCondition().toStringWithoutComments();
