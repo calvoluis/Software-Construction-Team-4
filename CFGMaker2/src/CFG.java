@@ -46,4 +46,16 @@ public class CFG {
 			System.out.println("To: "+edge.getToNode()+"\n\n");
 		}
 	}
+	
+	public String cfgToDotFormat(){
+		String dotFormat = "";
+		
+		for(CFGEdge edge : this.edges){
+			String fromId = edge.getFromNode();
+			String toId = edge.getToNode();
+			dotFormat += fromId + "->" + toId + ";";
+		}
+		
+		return dotFormat;
+	}
 }
