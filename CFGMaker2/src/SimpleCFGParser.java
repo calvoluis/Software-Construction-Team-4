@@ -135,7 +135,7 @@ public class SimpleCFGParser extends GenericVisitorAdapter<Object, Object>{
 				blockEnd = childEnd;
 				blockId += childId+" ";
 			}
-			else if (!(child instanceof NameExpr || child instanceof Type || child instanceof Parameter)){
+			else if (!(child instanceof Expression || child instanceof Type || child instanceof Parameter)){
 				if(blockBegin != -1){
 					if(isFirstChildBlock){
 						addEdge(parentId, blockId);
@@ -175,14 +175,14 @@ public class SimpleCFGParser extends GenericVisitorAdapter<Object, Object>{
 		
 		addNode(begin, end, nodeId, code);
 		
-		
-		
 		return super.visit(methodDecl, arg);
 	}
 	
 	@Override
 	public Object visit(BlockStmt blockStmt, Object arg){
-		iterateThroughChildren(blockStmt);
+//		if(blockStmt.getParentNode() instanceof MethodDeclaration){
+			iterateThroughChildren(blockStmt);
+//		}
 		
 		return super.visit(blockStmt, arg);
 	}
@@ -199,7 +199,13 @@ public class SimpleCFGParser extends GenericVisitorAdapter<Object, Object>{
 		
 		addNode(begin, end, nodeId, code);
 		
-		iterateThroughChildren(ifStmt);
+//		System.out.println("---IfStmt "+begin+" is parent of: ");
+//		for(Node child: ifStmt.getChildrenNodes()){
+//			System.out.println("----"+child.getBegin().line+" class: "+child.getClass().getSimpleName());
+//		}
+		if(ifStmt.getChildrenNodes().get(1) instanceof ExpressionStmt){
+			iterateThroughChildren(ifStmt);
+		}
 		
 //		Statement elseStmt = ifStmt.getElseStmt();
 //		if(elseStmt != null){
