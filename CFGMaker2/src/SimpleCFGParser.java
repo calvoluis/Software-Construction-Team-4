@@ -23,6 +23,7 @@ import com.github.javaparser.ast.stmt.ForeachStmt;
 import com.github.javaparser.ast.stmt.IfStmt;
 import com.github.javaparser.ast.stmt.ReturnStmt;
 import com.github.javaparser.ast.stmt.Statement;
+import com.github.javaparser.ast.stmt.SwitchEntryStmt;
 import com.github.javaparser.ast.stmt.SwitchStmt;
 import com.github.javaparser.ast.stmt.TryStmt;
 import com.github.javaparser.ast.stmt.WhileStmt;
@@ -77,6 +78,7 @@ public class SimpleCFGParser extends GenericVisitorAdapter<Object, Object>{
 		String nodeId = Integer.toString(begin);
 		String code = retStmt.toStringWithoutComments();
 		addNode(begin, end, nodeId, code);
+		addEdge(nodeId, Integer.toString(retStmt.getParentNode().getParentNode().getEnd().line));
 		return super.visit(retStmt, arg);
 	}
 	
@@ -201,8 +203,13 @@ public class SimpleCFGParser extends GenericVisitorAdapter<Object, Object>{
 		int begin = blockStmt.getBegin().line;
 		int end = blockStmt.getEnd().line;
 		
+		List<Node> children = blockStmt.getChildrenNodes();
+		
 		String lastChildId = iterateThroughChildren(blockStmt);
-		addEdge(lastChildId, Integer.toString(end));
+		if(children.get(children.size()-1) instanceof ExpressionStmt){
+			addEdge(lastChildId, Integer.toString(end));
+		}
+		addEdge(Integer.toString(end), Integer.toString(blockStmt.getParentNode().getParentNode().getEnd().line));
 		
 		return super.visit(blockStmt, arg);
 	}
@@ -221,7 +228,64 @@ public class SimpleCFGParser extends GenericVisitorAdapter<Object, Object>{
 			iterateThroughChildren(ifStmt);
 		}
 		
+		Statement elseStmt = ifStmt.getElseStmt();
+		if(elseStmt != null){
+			addEdge(nodeId, Integer.toString(elseStmt.getBegin().line));
+		}
+		
 		return super.visit(ifStmt, arg);
+	}
+	
+	@Override
+	public Object visit(ForStmt forStmt, Object arg){
+		int begin = forStmt.getBegin().line;
+		int end = forStmt.getEnd().line;
+		String nodeId = Integer.toString(begin);
+		String initialization = "";
+		for(Expression init : forStmt.getInit()){
+			initialization += init.toStringWithoutComments();
+		}
+		String update = "";
+		for(Expression upd : forStmt.getUpdate()){
+			update += upd.toStringWithoutComments();
+		}
+		String code = "for("+initialization+"; "+forStmt.getCompare().toStringWithoutComments()+"; "+update+")";
+		
+		addNode(begin, end, nodeId, code);
+		
+		if(forStmt.getChildrenNodes().get(1) instanceof ExpressionStmt){
+			iterateThroughChildren(forStmt);
+		}
+		
+		addEdge(Integer.toString(end), nodeId);
+		
+		return super.visit(forStmt, arg);
+	}
+	
+	@Override
+	public Object visit(SwitchStmt s, Object arg){
+		List<Node> children = s.getChildrenNodes();
+		int begin = s.getBegin().line;
+		
+		for(int i=0; i<children.size(); i++){
+			Node child = children.get(i);
+			
+			if(child instanceof SwitchEntryStmt){
+				int childBegin = child.getBegin().line;
+				int childEnd = child.getEnd().line;
+				String childId = Integer.toString(childBegin);
+				Expression label = ((SwitchEntryStmt) child).getLabel();
+				String childCode  = "default";
+				if(label != null){
+					childCode = label.toStringWithoutComments();
+				}
+				
+				addNode(childBegin, childEnd, childId, childCode);
+				addEdge(Integer.toString(begin), childId);
+			}
+		}
+		
+		return super.visit(s, null);
 	}
 	
 	@Override

@@ -51,9 +51,11 @@ public class CFG {
 		String dotFormat = "";
 		
 		for(CFGEdge edge : this.edges){
-			String fromId = edge.getFromNode();
-			String toId = edge.getToNode();
-			dotFormat += fromId + "->" + toId + ";";
+			String fromId = edge.getFromNode().replaceAll(" ", "");
+			String toId = edge.getToNode().replaceAll(" ", "");
+			dotFormat += fromId + "->" + toId + "; ";
+			dotFormat += fromId + " [label=\"" + edge.getFromNode() + "\"] ";
+			
 		}
 		
 		return dotFormat;
