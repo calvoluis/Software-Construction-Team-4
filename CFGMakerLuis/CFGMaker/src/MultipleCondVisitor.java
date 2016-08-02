@@ -1,7 +1,9 @@
 import java.util.List;
+
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.comments.Comment;
+import com.github.javaparser.ast.expr.BinaryExpr;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.stmt.AssertStmt;
 import com.github.javaparser.ast.stmt.BlockStmt;
@@ -29,8 +31,6 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
     @Override
     public Object visit(BlockStmt n, Object arg) {
     	List<Node> children = n.getChildrenNodes();
-//    	System.out.println("Looking at: "+n.getBeginLine()+"     Children: "+children.size()+"\n");
-    	//adds the current BlockStmt's children to the CFG if the children do not have children themselves
     	int begin = -1;
     	int end = -1;
     	String nodeId = "";
@@ -59,26 +59,20 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
     		String childId = Integer.toString(childBegin);
     		String childCode = child.toStringWithoutComments();
     		
-//    		System.out.println("Child begin: "+childBegin+" Class: "+child.getClass().getSimpleName());
-    		
     		if(isConditional){
     			if(code!=""){
-    				addNode(begin, end, nodeId, code);
-//	    			System.out.println("ADDED BASIC BLOCK "+nodeId);
+    				this.cfg.addNode(begin, end, nodeId, code);
     			}
     			handleConditionals(child,children,i);
-//    			System.out.println("ADDED CONDITIONAL "+childId);
     			begin = -1;
     			end = -1;
     			code = "";
     		}
     		else if(isCtrlFlowBreak){
     			if(code!=""){
-	    			addNode(begin, end, nodeId, code);
-//	    			System.out.println("ADDED BASIC BLOCK "+nodeId);
+	    			this.cfg.addNode(begin, end, nodeId, code);
     			}
     			handleBreaks(child,children,i);
-//    			System.out.println("ADDED CONDITIONAL "+childId);
     			begin = -1;
     			end = -1;
     			code = "";
@@ -92,8 +86,7 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
     		}
     		else{
     			if(i==children.size()-1){
-    				addNode(childBegin, childEnd, childId, childCode);
-//    				System.out.println("ADDED NON CONDITIONAL "+childId);
+    				this.cfg.addNode(childBegin, childEnd, childId, childCode);
     			}
     			else{
 		    		if(begin == -1){
@@ -111,7 +104,25 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
     @Override
     public Object visit(SwitchStmt s, Object arg){
     	List<Node> children = s.getChildrenNodes();
-//    	System.out.println("Looking at switch: "+s.getBeginLine()+"     Children: "+children.size()+"\n");
+    	for(int i=0; i<children.size(); i++){
+    		Node child = children.get(i);
+    		
+    		int childBegin = child.getBeginLine();
+    		int childEnd = child.getEndLine();
+    		String childId = Integer.toString(childBegin);
+    		
+    		if(child instanceof SwitchEntryStmt){
+    			String condition = ((SwitchEntryStmt) child).toStringWithoutComments();
+    			checkStmt(condition,childBegin,childEnd,childId,child);
+    			this.cfg.addEdge(Integer.toString(s.getBeginLine()),childId);
+    		}
+    	}  	
+    	return super.visit(s, arg);
+    }
+    
+    @Override
+	public Object visit(IfStmt s, Object arg){
+		List<Node> children = s.getChildrenNodes();
     	Node switchParent = s;
     	for(int i=0; i<children.size(); i++){
     		Node child = children.get(i);
@@ -121,16 +132,15 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
     		String childId = Integer.toString(childBegin);
     		String childCode = child.toStringWithoutComments();
     		
-//    		System.out.println("Child begin: "+childBegin+" Class: "+child.getClass().getSimpleName());
-    		if(child instanceof SwitchEntryStmt){
-    			String condition = ((SwitchEntryStmt) child).toStringWithoutComments();
+    		if(child instanceof BlockStmt || child instanceof IfStmt ||child instanceof BinaryExpr){
+    			String condition = child.toStringWithoutComments();
     			checkStmt(condition,childBegin,childEnd,childId,child);
-    			addEdge(Integer.toString(s.getBeginLine()),childId);
+    			this.cfg.addEdge(Integer.toString(s.getBeginLine()),Integer.toString(children.get(i).getEndLine()+1));
     		}
     	}
-    	
     	return super.visit(s, arg);
-    }
+	}
+    
     
     private void handleBreaks(Node child, List<Node> children, int i){
     	int childBegin = child.getBeginLine();
@@ -140,29 +150,29 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
 		if(child instanceof AssertStmt){
     		String condition = ((AssertStmt) child).toStringWithoutComments();
 			childEnd = ((AssertStmt) child).getEndLine();
-			addNode(childBegin, childEnd, childId, condition);
+			this.cfg.addNode(childBegin, childEnd, childId, condition);
 			checkEdge(i,children,childId);
 		}
 		else if(child instanceof BreakStmt){
-			addNode(childBegin, childEnd, childId, "break;");
+			this.cfg.addNode(childBegin, childEnd, childId, "break;");
 			checkEdge(i,children,childId);
 		}
 		else if(child instanceof TryStmt){
-			addNode(childBegin, childEnd, childId, "try");
+			this.cfg.addNode(childBegin, childEnd, childId, "try");
 			checkEdge(i,children,childId);
 		}
 		else if(child instanceof CatchClause){
 			String parameters = ((CatchClause) child).getParam().toStringWithoutComments();
-			addNode(childBegin, childEnd, childId, "catch("+parameters+")");
+			this.cfg.addNode(childBegin, childEnd, childId, "catch("+parameters+")");
 			checkEdge(i,children,childId);
 		}
 		else if(child instanceof ContinueStmt){
-			addNode(childBegin, childEnd, childId, "continue");
+			this.cfg.addNode(childBegin, childEnd, childId, "continue");
 			checkEdge(i,children,childId);
 		}
 		else if(child instanceof LabeledStmt){
 			String label = ((LabeledStmt) child).getLabel();
-			addNode(childBegin, childEnd, childId, label);
+			this.cfg.addNode(childBegin, childEnd, childId, label);
 			checkEdge(i,children,childId);
 		}
 	}
@@ -176,6 +186,9 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
     		String condition = ((IfStmt) child).getCondition().toStringWithoutComments();
 			childEnd = ((IfStmt) child).getCondition().getEndLine();
 			checkStmt(condition,childBegin,childEnd,childId,child);
+			if(child.getChildrenNodes().get(1) instanceof ExpressionStmt){
+				visit((IfStmt)child,null);
+			}
 			checkEdge(i,children,childId);
     	}
 		else if(child instanceof DoStmt){
@@ -210,7 +223,6 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
 		}
 		else if(child instanceof SwitchStmt){
 			String condition = ((SwitchStmt) child).getSelector().toStringWithoutComments();
-//			List<SwitchEntryStmt> entryStmts = ((SwitchStmt) child).getEntries();
 			checkStmt(condition,childBegin,childEnd,childId,child);
 			visit((SwitchStmt) child, null);
 		}
@@ -222,7 +234,6 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
 		List<Node> nodes = type.getChildrenNodes();
 		String insideNode = Integer.toString(nodes.get(1).getBeginLine());
 
-//		System.out.println("AND Found in "+type+" stmt");
 		String[] children = condition.split("[&]");
 		for(int i=0; i<children.length;i++)
 		{
@@ -260,7 +271,6 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
 		int ltr = 0;
 		List<Node> nodes = type.getChildrenNodes();
 		String insideNode = Integer.toString(nodes.get(1).getBeginLine());
-//		System.out.println("OR Found in "+type+" stmt");
 		String[] children = condition.split("[|]");
 		for(int i=0; i<children.length;i++)
 		{
@@ -301,24 +311,15 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
 			checkAnd(condition,childBegin,childEnd,childId,type);
 		}
 		else{
-		this.cfg.addNode(childBegin, childEnd, childId, condition+")");
+		this.cfg.addNode(childBegin, childEnd, childId, condition);
 		}
 	}
 	
-	
-    private void addNode(int begin, int end, String nodeId, String code){
-    	this.cfg.addNode(begin, end, nodeId, code);
-    }
-    
-    private void addEdge(String from, String to){
-    	this.cfg.addEdge(from,to);
-    }
-
     private void checkEdge(int i, List<Node> children, String childBegin){
     	if(i>0)
-    		addEdge(Integer.toString(children.get(i-1).getParentNode().getBeginLine()),childBegin);
+    		this.cfg.addEdge(Integer.toString(children.get(i-1).getParentNode().getBeginLine()),childBegin);
 		else
-			addEdge(Integer.toString(children.get(0).getBeginLine()),childBegin);
+			this.cfg.addEdge(Integer.toString(children.get(0).getBeginLine()),childBegin);
     }
     
 	public CFG returnCFG(CompilationUnit cu, Object arg){
