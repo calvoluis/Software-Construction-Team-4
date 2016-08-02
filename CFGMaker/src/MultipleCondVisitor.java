@@ -31,8 +31,6 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
     @Override
     public Object visit(BlockStmt n, Object arg) {
     	List<Node> children = n.getChildrenNodes();
-    	System.out.println("BlockStmt Visitor Looking at: "+n.getBegin().line+"     Children: "+children.size()+"\n");
-    	//adds the current BlockStmt's children to the CFG if the children do not have children themselves
     	int begin = -1;
     	int end = -1;
     	String nodeId = "";
@@ -56,31 +54,25 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
     		isCtrlFlowBreak = isCtrlFlowBreak || child instanceof BreakStmt;
     		isCtrlFlowBreak = isCtrlFlowBreak || child instanceof ThrowStmt;
     		
-    		int childBegin = child.getBegin().line;
-    		int childEnd = child.getBegin().line;
+    		int childBegin = child.getBeginLine();
+    		int childEnd = child.getEndLine();
     		String childId = Integer.toString(childBegin);
     		String childCode = child.toStringWithoutComments();
     		
-//    		System.out.println("Child begin: "+childBegin+" Class: "+child.getClass().getSimpleName());
-    		
     		if(isConditional){
     			if(code!=""){
-    				addNode(begin, end, nodeId, code);
-	    			System.out.println("ADDED BASIC BLOCK "+nodeId);
+    				this.cfg.addNode(begin, end, nodeId, code);
     			}
-    			handleConditionals(child);
-    			System.out.println("ADDED CONDITIONAL "+childId);
+    			handleConditionals(child,children,i);
     			begin = -1;
     			end = -1;
     			code = "";
     		}
     		else if(isCtrlFlowBreak){
     			if(code!=""){
-	    			addNode(begin, end, nodeId, code);
-	    			System.out.println("ADDED BASIC BLOCK "+nodeId);
+	    			this.cfg.addNode(begin, end, nodeId, code);
     			}
-    			handleBreaks(child);
-    			System.out.println("ADDED CONDITIONAL "+childId);
+    			handleBreaks(child,children,i);
     			begin = -1;
     			end = -1;
     			code = "";
@@ -94,8 +86,7 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
     		}
     		else{
     			if(i==children.size()-1){
-    				addNode(childBegin, childEnd, childId, childCode);
-    				System.out.println("ADDED NON CONDITIONAL "+childId);
+    				this.cfg.addNode(childBegin, childEnd, childId, childCode);
     			}
     			else{
 		    		if(begin == -1){
@@ -111,129 +102,99 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
     }
     
     @Override
-    public Object visit(SwitchEntryStmt s, Object arg){
+    public Object visit(SwitchStmt s, Object arg){
     	List<Node> children = s.getChildrenNodes();
-    	System.out.println("\nSwitch Visitor Looking at: "+s.getBegin().line+"     Children: "+children.size());
-    	
     	for(int i=0; i<children.size(); i++){
     		Node child = children.get(i);
     		
-    		int childBegin = child.getBegin().line;
-    		int childEnd = child.getEnd().line;
+    		int childBegin = child.getBeginLine();
+    		int childEnd = child.getEndLine();
     		String childId = Integer.toString(childBegin);
-    		String childCode = child.toStringWithoutComments();
     		
-    		System.out.println("Child begin: "+childBegin+" Class: "+child.getClass().getSimpleName());
-    	}
-    	
+    		if(child instanceof SwitchEntryStmt){
+    			String condition = ((SwitchEntryStmt) child).toStringWithoutComments();
+    			checkStmt(condition,childBegin,childEnd,childId,child);
+    			this.cfg.addEdge(Integer.toString(s.getBeginLine()),childId);
+    		}
+    	}  	
     	return super.visit(s, arg);
     }
-
+    
     @Override
-    public Object visit(BinaryExpr e, Object arg){
-    	List<Node> children = e.getChildrenNodes();
-    	System.out.println("BinaryExpr Visitor Looking at: "+e.getBegin().line+"     Children: "+children.size()+"\n");
-    	
+	public Object visit(IfStmt s, Object arg){
+		List<Node> children = s.getChildrenNodes();
+    	Node switchParent = s;
     	for(int i=0; i<children.size(); i++){
     		Node child = children.get(i);
     		
-    		int childBegin = child.getBegin().line;
-    		int childEnd = child.getEnd().line;
+    		int childBegin = child.getBeginLine();
+    		int childEnd = child.getEndLine();
     		String childId = Integer.toString(childBegin);
     		String childCode = child.toStringWithoutComments();
     		
-    		System.out.println("Child begin: "+childBegin+" Class: "+child.getClass().getSimpleName());
+    		if(child instanceof BlockStmt || child instanceof IfStmt ||child instanceof BinaryExpr){
+    			String condition = child.toStringWithoutComments();
+    			checkStmt(condition,childBegin,childEnd,childId,child);
+    			this.cfg.addEdge(Integer.toString(s.getBeginLine()),Integer.toString(children.get(i).getEndLine()+1));
+    		}
     	}
-    	
-    	return super.visit(e, arg);
-    }
+    	return super.visit(s, arg);
+	}
     
-    private void handleBreaks(Node child){
-    	int childBegin = child.getBegin().line;
-		int childEnd = child.getEnd().line;
+    
+    private void handleBreaks(Node child, List<Node> children, int i){
+    	int childBegin = child.getBeginLine();
+		int childEnd = child.getEndLine();
 		String childId = Integer.toString(childBegin);
 		
 		if(child instanceof AssertStmt){
     		String condition = ((AssertStmt) child).toStringWithoutComments();
-			childEnd = ((AssertStmt) child).getEnd().line;
-			addNode(childBegin, childEnd, childId, condition);
+			childEnd = ((AssertStmt) child).getEndLine();
+			this.cfg.addNode(childBegin, childEnd, childId, condition);
+			checkEdge(i,children,childId);
 		}
 		else if(child instanceof BreakStmt){
-			addNode(childBegin, childEnd, childId, "break;");
+			this.cfg.addNode(childBegin, childEnd, childId, "break;");
+			checkEdge(i,children,childId);
 		}
 		else if(child instanceof TryStmt){
-			addNode(childBegin, childEnd, childId, "try");
+			this.cfg.addNode(childBegin, childEnd, childId, "try");
+			checkEdge(i,children,childId);
 		}
 		else if(child instanceof CatchClause){
 			String parameters = ((CatchClause) child).getParam().toStringWithoutComments();
-			addNode(childBegin, childEnd, childId, "catch("+parameters+")");
+			this.cfg.addNode(childBegin, childEnd, childId, "catch("+parameters+")");
+			checkEdge(i,children,childId);
 		}
 		else if(child instanceof ContinueStmt){
-			addNode(childBegin, childEnd, childId, "continue");
+			this.cfg.addNode(childBegin, childEnd, childId, "continue");
+			checkEdge(i,children,childId);
 		}
 		else if(child instanceof LabeledStmt){
 			String label = ((LabeledStmt) child).getLabel();
-			addNode(childBegin, childEnd, childId, label);
+			this.cfg.addNode(childBegin, childEnd, childId, label);
+			checkEdge(i,children,childId);
 		}
 	}
 
-	private void handleConditionals(Node child){
-    	int childBegin = child.getBegin().line;
-		int childEnd = child.getEnd().line;
+	private void handleConditionals(Node child, List<Node> children, int i){
+    	int childBegin = child.getBeginLine();
+		int childEnd = child.getEndLine();
 		String childId = Integer.toString(childBegin);
 				
     	if(child instanceof IfStmt){
-    		Expression ifExpr = ((IfStmt) child).getCondition();
-    		System.out.println("If Statement class: "+ifExpr.getClass().getSimpleName());
-    		if(ifExpr instanceof BinaryExpr){
-    			BinaryExpr binIfExpr = ((BinaryExpr) ifExpr);
-    			if(binIfExpr.getOperator()==BinaryExpr.Operator.and){
-    				System.out.println("FOUND AN &&");
-    				System.out.println("Class of left side: "+binIfExpr.getLeft().getClass().getSimpleName());
-    			}
-    			else if(binIfExpr.getOperator()==BinaryExpr.Operator.or){
-    				System.out.println("FOUND AN ||");
-    			}
-//    			System.out.println("If Expression Children: "+ifExpr.getChildrenNodes().size());
-    			System.out.println("if("+binIfExpr.getOperator().toString());
-    		}
-//    		String condition = ifExpr.toStringWithoutComments();
-//			childEnd = ifExpr.getEnd().line;
-			
-//			if(condition.contains("||")){
-//				System.out.println("OR Found in IF stmt");
-//				String[] children = condition.split("[|]");
-//				addNode(childBegin,childEnd,childId+"A","if("+children[0]+"||");
-//				addNode(childBegin,childEnd,childId+"B",children[2]+")");
-//			}
-//			else if(condition.contains("&&")){
-//				System.out.println("AND Found in if stmt");
-//				String[] children = condition.split("[&]");
-//				addNode(childBegin,childEnd,childId+"A","if("+children[0]+"&&");
-//				addNode(childBegin,childEnd,childId+"B",children[2]+")");
-//			}
-			
-//			else{
-//				addNode(childBegin, childEnd, childId, "if("+condition+")");
-//			}
-		}
+    		String condition = ((IfStmt) child).getCondition().toStringWithoutComments();
+			childEnd = ((IfStmt) child).getCondition().getEndLine();
+			checkStmt(condition,childBegin,childEnd,childId,child);
+			if(child.getChildrenNodes().get(1) instanceof ExpressionStmt){
+				visit((IfStmt)child,null);
+			}
+			checkEdge(i,children,childId);
+    	}
 		else if(child instanceof DoStmt){
 			String condition = ((DoStmt) child).getCondition().toStringWithoutComments();
-			if(condition.contains("||")){
-				System.out.println("OR Found in DO stmt");
-				String[] children = condition.split("[|]");
-				addNode(childBegin,childEnd,childId+"A","do{...}while("+children[0]+"||");
-				addNode(childBegin,childEnd,childId+"B",children[2]+")");
-			}
-			else if(condition.contains("&&")){
-				System.out.println("AND Found in DO stmt");
-				String[] children = condition.split("[&]");
-				addNode(childBegin,childEnd,childId+"A","do{...}while("+children[0]+"&&");
-				addNode(childBegin,childEnd,childId+"B",children[2]+")");
-			}
-			else{
-			addNode(childBegin, childEnd, childId, "do{...}while("+condition+");");
-			}
+			checkStmt(condition,childBegin,childEnd,childId,child);
+			checkEdge(i,children,childId);
 		}
 		else if(child instanceof ForStmt){
 			String condition = ((ForStmt) child).getCompare().toStringWithoutComments();
@@ -247,103 +208,120 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
 			for(Expression update : updatesList){
 				updates+=update.toStringWithoutComments();
 			}
-			if(condition.contains("||")){
-				System.out.println("OR Found in FOR stmt");
-				String[] children = condition.split("[|]");
-				addNode(childBegin,childEnd,childId+"A","; "+children[0]+"||");
-				addNode(childBegin,childEnd,childId+"B",children[2]+";");
-			}
-			else if(condition.contains("&&")){
-				System.out.println("AND Found in FOR stmt");
-				String[] children = condition.split("[&]");
-				addNode(childBegin,childEnd,childId+"A","; "+children[0]+"&&");
-				addNode(childBegin,childEnd,childId+"B",children[2]+";");
-			}
-			else{
-			addNode(childBegin, childEnd, childId, "for("+initializations+"; "+condition+"; "+updates+")");
-			}
+			checkStmt(condition,childBegin,childEnd,childId,child);
+			checkEdge(i,children,childId);
 		}
 		else if(child instanceof ForeachStmt){
 			String condition = ((ForeachStmt) child).getIterable().toStringWithoutComments();
-			if(condition.contains("||")){
-				System.out.println("OR Found in FOREACH stmt");
-				String[] children = condition.split("[|]");
-				addNode(childBegin,childEnd,childId+"A","foreach("+children[0]+"||");
-				addNode(childBegin,childEnd,childId+"B",children[2]+")");
-			}
-			else if(condition.contains("&&")){
-				System.out.println("AND Found in FOREACH stmt");
-				String[] children = condition.split("[&]");
-				addNode(childBegin,childEnd,childId+"A","foreach("+children[0]+"&&");
-				addNode(childBegin,childEnd,childId+"B",children[2]+")");
-			}
-			else{
-			addNode(childBegin, childEnd, childId, "foreach("+condition+")");
-			}
+			checkStmt(condition,childBegin,childEnd,childId,child);
+			checkEdge(i,children,childId);
 		}
 		else if(child instanceof WhileStmt){
 			String condition = ((WhileStmt) child).getCondition().toStringWithoutComments();
-			if(condition.contains("||")){
-				System.out.println("OR Found in While stmt");
-				String[] children = condition.split("[|]");
-				addNode(childBegin,childEnd,childId+"A","while("+children[0]+"||");
-				addNode(childBegin,childEnd,childId+"B",children[2]+")");
-			}
-			else if(condition.contains("&&")){
-				System.out.println("AND Found in While stmt");
-				String[] children = condition.split("[&]");
-				addNode(childBegin,childEnd,childId+"A","while("+children[0]+"&&");
-				addNode(childBegin,childEnd,childId+"B",children[2]+")");
-			}
-			else{
-			addNode(childBegin, childEnd, childId, "while("+condition+")");
-			}
+			checkStmt(condition,childBegin,childEnd,childId,child);
+			checkEdge(i,children,childId);
 		}
 		else if(child instanceof SwitchStmt){
 			String condition = ((SwitchStmt) child).getSelector().toStringWithoutComments();
-//			List<SwitchEntryStmt> entryStmts = ((SwitchStmt) child).getEntries();
-			if(condition.contains("||")){
-				System.out.println("OR Found in Switch stmt");
-				String[] children = condition.split("[|]");
-				addNode(childBegin,childEnd,childId+"A","switch("+children[0]+"||");
-				addNode(childBegin,childEnd,childId+"B",children[2]+")");
-			}
-			else if(condition.contains("&&")){
-				System.out.println("AND Found in Switch stmt");
-				String[] children = condition.split("[&]");
-				addNode(childBegin,childEnd,childId+"A","switch("+children[0]+"&&");
-				addNode(childBegin,childEnd,childId+"B",children[2]+")");
-			}
-			else{
-			addNode(childBegin, childEnd, childId, "switch("+condition+")");
-			}
+			checkStmt(condition,childBegin,childEnd,childId,child);
 			visit((SwitchStmt) child, null);
-		}
-		else if(child instanceof SwitchEntryStmt){
-			System.out.println("-------------------------SWITCH ENTRY STATEMENT FOUND");
-			String condition = ((SwitchEntryStmt) child).getLabel().toStringWithoutComments();
-			if(condition.contains("||")){
-				System.out.println("OR Found in DO stmt");
-				String[] children = condition.split("[|]");
-				addNode(childBegin,childEnd,childId+"A","case("+children[0]+"||");
-				addNode(childBegin,childEnd,childId+"B",children[2]+":");
-			}
-			else if(condition.contains("&&")){
-				System.out.println("AND Found in DO stmt");
-				String[] children = condition.split("[&]");
-				addNode(childBegin,childEnd,childId+"A","case("+children[0]+"&&");
-				addNode(childBegin,childEnd,childId+"B",children[2]+":");
-			}
-			else{
-			addNode(childBegin, childEnd, childId, "case "+condition+":");
-			}
 		}
     }
     
-    private void addNode(int begin, int end, String nodeId, String code){
-    	this.cfg.addNode(begin, end, nodeId, code);
-    }
+	private void checkAnd(String condition, int childBegin, int childEnd, String childId, Node type){
+		char[] alph = "abcdefghijklmnopqrstuvwxyz".toCharArray();
+		int ltr =0;
+		List<Node> nodes = type.getChildrenNodes();
+		String insideNode = Integer.toString(nodes.get(1).getBeginLine());
 
+		String[] children = condition.split("[&]");
+		for(int i=0; i<children.length;i++)
+		{
+			//section checks for other type of conditional within conditional
+			String[] otherChildren = children[i].split("[|]");
+			if(otherChildren.length>1)
+			{
+				checkOr(children[i],childBegin,childEnd,childId,type);
+				for(int j=2;j<children.length;j+=2)
+				{
+					otherChildren = children[j].split("[&]");
+					if(otherChildren.length>1)
+						checkOr(children[j],childBegin,childEnd,childId,type);					
+				}				
+				ltr+=2;
+			}
+			
+			//add && nodes
+			else if(!children[i].equals("")){
+				if(i+2<children.length)
+				{
+					this.cfg.addNode(childBegin,childEnd,childId+alph[ltr],children[i]+"&&");
+					this.cfg.addNode(childBegin,childEnd,childId+alph[ltr+1],children[i+=2]+")");
+					this.cfg.addEdge(childId+alph[ltr],insideNode);
+					this.cfg.addEdge(childId+alph[ltr+1],insideNode);
+					this.cfg.addEdge(childId+alph[ltr++],childId+alph[ltr++]);
+				}
+			}
+		}
+		
+	}
+	
+	private void checkOr(String condition, int childBegin, int childEnd, String childId, Node type){
+		char[] alph = "abcdefghijklmnopqrstuvwxyz".toCharArray();
+		int ltr = 0;
+		List<Node> nodes = type.getChildrenNodes();
+		String insideNode = Integer.toString(nodes.get(1).getBeginLine());
+		String[] children = condition.split("[|]");
+		for(int i=0; i<children.length;i++)
+		{
+			//section checks for other type of conditional within conditional
+			String[] otherChildren = children[i].split("[&]");
+			if(otherChildren.length>1)
+			{
+				checkAnd(children[i],childBegin,childEnd,childId,type);
+				for(int j=2;j<children.length;j+=2)
+				{
+					otherChildren = children[j].split("[&]");
+					if(otherChildren.length>1)
+						checkAnd(children[j],childBegin,childEnd,childId,type);					
+				}				
+				ltr+=2;
+			}
+			
+			//add || nodes
+			if(!children[i].equals("")){
+				if(i+2<children.length)
+				{
+					this.cfg.addNode(childBegin,childEnd,childId+alph[ltr],children[i]+"||");
+					this.cfg.addNode(childBegin,childEnd,childId+alph[ltr+1],children[i+=2]+")");
+					this.cfg.addEdge(childId+alph[ltr],insideNode);
+					this.cfg.addEdge(childId+alph[ltr+1],insideNode);
+					this.cfg.addEdge(childId+alph[ltr++],childId+alph[ltr++]);
+				}
+			}
+		}
+	}
+	
+	private void checkStmt(String condition, int childBegin, int childEnd, String childId, Node type){
+		
+		if(condition.contains("||")){
+			checkOr(condition,childBegin,childEnd,childId,type);
+		}
+		else if(condition.contains("&&")){
+			checkAnd(condition,childBegin,childEnd,childId,type);
+		}
+		else{
+		this.cfg.addNode(childBegin, childEnd, childId, condition);
+		}
+	}
+	
+    private void checkEdge(int i, List<Node> children, String childBegin){
+    	if(i>0)
+    		this.cfg.addEdge(Integer.toString(children.get(i-1).getParentNode().getBeginLine()),childBegin);
+		else
+			this.cfg.addEdge(Integer.toString(children.get(0).getBeginLine()),childBegin);
+    }
+    
 	public CFG returnCFG(CompilationUnit cu, Object arg){
     	visit(cu, arg);
     	return this.cfg;

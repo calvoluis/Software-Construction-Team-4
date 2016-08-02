@@ -3,6 +3,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+
 import com.thoughtworks.xstream.XStream;
 
 public class CFGMaker {
@@ -26,30 +27,43 @@ public class CFGMaker {
 			} while(!fileFound);
 			if(fileFound){
 				SimpleCFGParser simpleParser = new SimpleCFGParser(fileName);
-//				simpleParser.parse();
-//				CFG simpleCFG = simpleParser.getCFG();
-//				simpleCFG.printNodes();
+				simpleParser.parse();
+				CFG cfg = simpleParser.getCFG();
+				cfg.printNodes();
+				cfg.printEdges();
+		//		saveCFG(cfg);
 				
-				MultiCondCFGParser multicondParser = new MultiCondCFGParser(fileName);
-				multicondParser.parse();
-				CFG multiCFG = multicondParser.getCFG();
-				multiCFG.printNodes();
+				MultiCondCFGParser multi = new MultiCondCFGParser(fileName);
+				multi.parse();
+				cfg = multi.getCFG();
+				System.out.println("Printing Multiple Condition CFG");
+				cfg.printNodes();
+				cfg.printEdges();
+			//	saveCFG(cfg);
 				
-//				saveCFG(simpleCFG);
+				String dotFormat = cfg.cfgToDotFormat();
+				System.out.println(dotFormat);
+		        VisualizeCFG.createDotGraph(dotFormat, "SimpleCFG");
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		//loadCFG();
 	}
-	
-	
 	public static void saveCFG(CFG cfg){
+		BufferedReader userInput = new BufferedReader(new InputStreamReader(System.in));
+		System.out.println("Please enter file name (full path with .xml extension):");
+		String fileName = "";
+		try{
+			fileName = userInput.readLine();
+		}
+		catch (IOException e){
+			e.printStackTrace();
+		}
 		XStream xstream=new XStream();
 		String xml = xstream.toXML(cfg);
 		System.out.println(xml);
 		try{
-			FileWriter out = new FileWriter("cfg.xml");
+			FileWriter out = new FileWriter(fileName);
 			out.write(xml);
 			out.flush();
 			out.close();
@@ -58,14 +72,5 @@ public class CFGMaker {
 			e.printStackTrace();
 		}
 	}
-	
-	
-//	public static void loadCFG() {
-//		File file = new File("E:\\USB BACKUP\\Semester 1\\java work and notes\\xstream.xml");
-//		XStream xstream = new XStream();
-//		CFG yourData=(CFG)xstream.fromXML(file);
-//		yourData.printNodes();	
-//	}
-
 
 }

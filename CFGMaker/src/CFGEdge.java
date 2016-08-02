@@ -1,18 +1,17 @@
-
 public class CFGEdge {
-	private int fromNode;
-	private int toNode;
+	private String fromNode;
+	private String toNode;
 	
-	public CFGEdge(int from, int to){
-		this.fromNode = from;
-		this.toNode = to;
+	public CFGEdge(String from, String to){
+		this.fromNode = from.trim();
+		this.toNode = to.trim();
 	}
 	
-	public int getFromNode(){
+	public String getFromNode(){
 		return this.fromNode;
 	}
 	
-	public int getToNode(){
+	public String getToNode(){
 		return this.toNode;
 	}
 }
