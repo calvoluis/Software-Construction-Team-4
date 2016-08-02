@@ -25,14 +25,14 @@ public class CFGMaker {
 			if(fileFound){
 				SimpleCFGParser simpleParser = new SimpleCFGParser(fileName);
 				simpleParser.parse();
-				CFG cfg = simpleParser.getCFG();
-				cfg.printNodes();
-				cfg.printEdges();
+				CFG simpleCFG = simpleParser.getCFG();
+				simpleCFG.printNodes();
+				simpleCFG.printEdges();
 				
 //				String dotFormat="1->2;1->3;1->4;4->5;4->6;6->7;5->7;3->8;3->6;8->7;2->8;2->5;";
-				String dotFormat = cfg.cfgToDotFormat();
+				String dotFormat = simpleCFG.cfgToDotFormat();
 				System.out.println(dotFormat);
-		        VisualizeCFG.createDotGraph(dotFormat, "DotGraph");
+		        VisualizeCFG.createDotGraph(dotFormat, "SimpleCFG");
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
