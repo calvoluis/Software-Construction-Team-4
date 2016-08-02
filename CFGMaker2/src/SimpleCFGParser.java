@@ -7,8 +7,11 @@ import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseException;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Node;
+import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.comments.Comment;
 import com.github.javaparser.ast.expr.Expression;
+import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.BreakStmt;
 import com.github.javaparser.ast.stmt.CatchClause;
@@ -18,6 +21,7 @@ import com.github.javaparser.ast.stmt.IfStmt;
 import com.github.javaparser.ast.stmt.ReturnStmt;
 import com.github.javaparser.ast.stmt.Statement;
 import com.github.javaparser.ast.stmt.TryStmt;
+import com.github.javaparser.ast.type.Type;
 import com.github.javaparser.ast.visitor.GenericVisitorAdapter;
 
 public class SimpleCFGParser extends GenericVisitorAdapter<Object, Object>{
@@ -64,88 +68,6 @@ public class SimpleCFGParser extends GenericVisitorAdapter<Object, Object>{
 	}
 	
 	@Override
-	public Object visit(BlockStmt blockStmt, Object arg){
-		Node parent = blockStmt.getParentNode();
-		int parentBegin = getRealBegin(parent);
-		String parentId = Integer.toString(parentBegin);
-		List<Node> children = blockStmt.getChildrenNodes();
-		
-		System.out.println("Parent :"+parentBegin + " class: "+parent.getClass().getSimpleName());
-		
-		int begin = -1;
-		int end = -1;
-		String nodeId = "";
-		String code = "";
-		boolean isFirstBlockChild = true;
-		String prevId = "";
-		for(int i=0; i<children.size(); i++){
-			Node child = children.get(i);
-			int childBegin = child.getBegin().line;
-			int childEnd = child.getEnd().line;
-			String childId = Integer.toString(childBegin);
-			String childCode = child.toStringWithoutComments();
-			
-			System.out.println("-Child :"+childBegin+" class: "+child.getClass().getSimpleName());
-			
-			if(child instanceof ExpressionStmt){
-				if(begin==-1){
-					begin = childBegin;
-				}
-				end = childEnd;
-				nodeId += childId+" ";
-				code += childCode+"\n";
-				
-				if(i == children.size()-1){
-					addNode(begin, end, nodeId, code);
-					if(isFirstBlockChild && parentBegin != -1){
-						addEdge(parentId, nodeId);
-					}
-					else if(prevId != ""){
-						addEdge(prevId, nodeId);
-					}
-				}
-			}
-			else if(child instanceof EmptyStmt || child instanceof Comment){
-				if(begin==-1){
-					begin = childBegin;
-				}
-				end = childEnd;
-				nodeId += childId+" ";
-			}
-			else{
-				if(begin != -1){
-					if(isFirstBlockChild){
-						addEdge(parentId, nodeId);
-					}
-					else if(prevId != ""){
-						addEdge(prevId, nodeId);
-					}
-					addNode(begin, end, nodeId, code);
-					addEdge(nodeId, childId);
-				}
-				else{
-					if(isFirstBlockChild){
-						addEdge(parentId, childId);
-					}
-					else if(prevId != ""){
-						addEdge(prevId, childId);
-					}
-//					addNode(begin, end, childId, code);
-//					addEdge(nodeId, childId);
-				}
-				prevId = childId;
-				begin = -1;
-				end = -1;
-				nodeId = "";
-				code = "";
-				isFirstBlockChild = false;
-			}
-		}
-		
-		return super.visit(blockStmt, arg);
-	}
-	
-	@Override
 	public Object visit(ReturnStmt retStmt, Object arg){
 		int begin = retStmt.getBegin().line;
 		int end = retStmt.getEnd().line;
@@ -165,6 +87,106 @@ public class SimpleCFGParser extends GenericVisitorAdapter<Object, Object>{
 		return super.visit(breakStmt, arg);
 	}
 	
+	private void iterateThroughChildren(Node parent){
+		int parentBegin = parent.getBegin().line;
+		int parentEnd = parent.getEnd().line;
+		String parentId = Integer.toString(parentBegin);
+		List<Node> children = parent.getChildrenNodes();
+		
+		System.out.println("Parent: "+parentId+" class: "+parent.getClass().getSimpleName());
+		
+		int blockBegin = -1;
+		int blockEnd = -1;
+		String blockId = "";
+		String blockCode = "";
+		boolean isFirstChildBlock = true;
+		String prevId = "";
+		for(int i=0; i<children.size(); i++){
+			Node child = children.get(i);
+			int childBegin = child.getBegin().line;
+			int childEnd = child.getEnd().line;
+			String childId = Integer.toString(childBegin);
+			String childCode = child.toStringWithoutComments();
+			
+			System.out.println("-Child: "+childId+" class: "+child.getClass().getSimpleName());
+			
+			if(child instanceof ExpressionStmt){
+				if(blockBegin==-1){
+					blockBegin = childBegin;
+				}
+				blockEnd = childEnd;
+				blockId += childId+" ";
+				blockCode += childCode+"\n";
+				
+				if(i == children.size()-1){
+					addNode(blockBegin, blockEnd, blockId, blockCode);
+					if(isFirstChildBlock && parentBegin != -1){
+						addEdge(parentId, blockId);
+					}
+					else if(prevId != ""){
+						addEdge(prevId, blockId);
+					}
+				}
+			}
+			else if(child instanceof EmptyStmt || child instanceof Comment){
+				if(blockBegin==-1){
+					blockBegin = childBegin;
+				}
+				blockEnd = childEnd;
+				blockId += childId+" ";
+			}
+			else if (!(child instanceof NameExpr || child instanceof Type || child instanceof Parameter)){
+				if(blockBegin != -1){
+					if(isFirstChildBlock){
+						addEdge(parentId, blockId);
+					}
+					else if(prevId != ""){
+						addEdge(prevId, blockId);
+					}
+					addNode(blockBegin, blockEnd, blockId, blockCode);
+					addEdge(blockId, childId);
+				}
+				else{
+					if(isFirstChildBlock){
+						addEdge(parentId, childId);
+					}
+					else if(prevId != ""){
+						addEdge(prevId, childId);
+					}
+//					addNode(blockBegin, blockEnd, childId, blockCode);
+//					addEdge(blockId, childId);
+				}
+				prevId = childId;
+				blockBegin = -1;
+				blockEnd = -1;
+				blockId = "";
+				blockCode = "";
+				isFirstChildBlock = false;
+			}
+		}
+	}
+	
+	@Override
+	public Object visit(MethodDeclaration methodDecl, Object arg){
+		int begin = methodDecl.getBegin().line;
+		int end = methodDecl.getEnd().line;
+		String nodeId = Integer.toString(begin);
+		String code = methodDecl.getDeclarationAsString();
+		
+		addNode(begin, end, nodeId, code);
+		
+		
+		
+		return super.visit(methodDecl, arg);
+	}
+	
+	@Override
+	public Object visit(BlockStmt blockStmt, Object arg){
+		iterateThroughChildren(blockStmt);
+		
+		return super.visit(blockStmt, arg);
+	}
+	
 	@Override
 	public Object visit(IfStmt ifStmt, Object arg){
 		Expression condition = ifStmt.getCondition();
@@ -173,12 +195,16 @@ public class SimpleCFGParser extends GenericVisitorAdapter<Object, Object>{
 		String nodeId = Integer.toString(begin);
 		String code = "if("+condition.toStringWithoutComments()+")";
 		
+//		System.out.println("Parent of: "+nodeId+" class: "+ifStmt.getParentNode().getParentNode().getClass().getSimpleName());
+		
 		addNode(begin, end, nodeId, code);
 		
-		Statement elseStmt = ifStmt.getElseStmt();
-		if(elseStmt != null){
-			addEdge(nodeId, Integer.toString(elseStmt.getBegin().line));
-		}
+		iterateThroughChildren(ifStmt);
+		
+//		Statement elseStmt = ifStmt.getElseStmt();
+//		if(elseStmt != null){
+//			addEdge(nodeId, Integer.toString(elseStmt.getBegin().line));
+//		}
 		return super.visit(ifStmt, arg);
 	}
 	
@@ -192,9 +218,6 @@ public class SimpleCFGParser extends GenericVisitorAdapter<Object, Object>{
 		addNode(begin, end, nodeId, code);
 		
 		List<CatchClause> catchStmts = tryStmt.getCatchs();
-//		if(elseStmt != null){
-//			addEdge(nodeId, Integer.toString(elseStmt.getBegin().line));
-//		}
 		for(CatchClause catchStmt : catchStmts){
 			addEdge(nodeId, Integer.toString(catchStmt.getBegin().line));
 		}
