@@ -1,10 +1,7 @@
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
-
-import com.thoughtworks.xstream.XStream;
 
 public class CFGMaker {
 
@@ -14,7 +11,6 @@ public class CFGMaker {
 		String fileName = "";
 		try {
 			boolean fileFound = false;
-			fileFound=true;
 			do{
 				fileName = userInput.readLine();
 				File sourceCode = new File(fileName);
@@ -27,43 +23,23 @@ public class CFGMaker {
 				}
 			} while(!fileFound);
 			if(fileFound){
-				
 				SimpleCFGParser simpleParser = new SimpleCFGParser(fileName);
 				simpleParser.parse();
 				CFG cfg = simpleParser.getCFG();
 				cfg.printNodes();
 				cfg.printEdges();
-				MultiCondCFGParser multiParser = new MultiCondCFGParser(fileName);
-				multiParser.parse();
-				CFG multiCFG = multiParser.getCFG();
-				multiCFG.printNodes();
-				multiCFG.printEdges();
+//				MultiCondCFGParser multi = new MultiCondCFGParser(fileName);
+//				multi.parse();
+//				CFG cfg = multi.getCFG();
+//				cfg.printNodes();
+//				cfg.printEdges();
+				
+//				String dotFormat="1->2;1->3;1->4;4->5;4->6;6->7;5->7;3->8;3->6;8->7;2->8;2->5;";
+				String dotFormat = cfg.cfgToDotFormat();
+//				System.out.println(dotFormat);
+		        VisualizeCFG.createDotGraph(dotFormat, "DotGraph");
 			}
 		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-	
-	public static void saveCFG(CFG cfg){
-		BufferedReader userInput = new BufferedReader(new InputStreamReader(System.in));
-		System.out.println("Please enter file name (full path with .xml extension):");
-		String fileName = "";
-		try{
-			fileName = userInput.readLine();
-		}
-		catch (IOException e){
-			e.printStackTrace();
-		}
-		XStream xstream=new XStream();
-		String xml = xstream.toXML(cfg);
-		System.out.println(xml);
-		try{
-			FileWriter out = new FileWriter(fileName);
-			out.write(xml);
-			out.flush();
-			out.close();
-		}
-		catch (IOException e){
 			e.printStackTrace();
 		}
 	}
