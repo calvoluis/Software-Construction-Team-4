@@ -165,4 +165,28 @@ public class OverlappingRectangles {
 	  assert this.multiply(result).mod(m).equals(ONE) : this;
 	  return result;
 	}
+
+	public void returnTest(){
+		int a = 8;
+		int b=9;
+		return a*b;
+	}
+
+	public void ifTests(int a, int b, int c, int d){
+		if(a && b && c){
+			int a = 8;
+		}
+		else if((a && b) && c){
+			int a = 8;
+		}
+		else if(a && (b && c)){
+			int a = 8;
+		}
+		else if((a && b) || (c || d)){
+			int a = 8;
+		}
+		else{
+			int a = 8;
+		}
+	}
 }
