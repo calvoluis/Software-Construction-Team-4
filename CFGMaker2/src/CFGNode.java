@@ -16,7 +16,7 @@ public class CFGNode {
 		return this.representedCode;
 	}
 	
-	public String getIdNum(){
+	public String getId(){
 		return this.nodeId;
 	}
 	

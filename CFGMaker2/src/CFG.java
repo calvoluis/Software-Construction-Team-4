@@ -20,10 +20,19 @@ public class CFG {
 		return this.edges.add(edge);
 	}
 	
+	public boolean containsNode(String nodeId){
+		for(CFGNode node : this.nodes){
+			if(node.getId()==nodeId){
+				return true;
+			}
+		}
+		return false;
+	}
+	
 	public void printNodes(){
 		for(int i=0; i<this.nodes.size(); i++){
 			CFGNode node = this.nodes.get(i);
-			System.out.println("ID: "+node.getIdNum());
+			System.out.println("ID: "+node.getId());
 			System.out.println("Begin: "+node.getBeginLine());
 			System.out.println("Code:\n"+node.getCode());
 			System.out.println("End: "+node.getEndLine()+"\n\n");
