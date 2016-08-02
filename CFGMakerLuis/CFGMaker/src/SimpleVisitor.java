@@ -65,10 +65,9 @@ public class SimpleVisitor extends GenericVisitorAdapter<Object, Object> {
     		if(isConditional){
     			if(code!=""){
 	    			addNode(begin, end, nodeId, code);
-	    			checkEdge(i,children,childId);
 	    			System.out.println("ADDED BASIC BLOCK "+nodeId);
     			}
-    			handleConditionals(child,children,i);
+    			handleConditionals(child);
     			System.out.println("ADDED CONDITIONAL "+childId);
     			begin = -1;
     			end = -1;
@@ -77,10 +76,9 @@ public class SimpleVisitor extends GenericVisitorAdapter<Object, Object> {
     		else if(isCtrlFlowBreak){
     			if(code!=""){
 	    			addNode(begin, end, nodeId, code);
-	    			checkEdge(i,children,childId);
 	    			System.out.println("ADDED BASIC BLOCK "+nodeId);
     			}
-    			handleBreaks(child,children,i);
+    			handleBreaks(child);
     			System.out.println("ADDED CONDITIONAL "+childId);
     			begin = -1;
     			end = -1;
@@ -96,7 +94,6 @@ public class SimpleVisitor extends GenericVisitorAdapter<Object, Object> {
     		else{
     			if(i==children.size()-1){
     				addNode(childBegin, childEnd, childId, childCode);
-    				checkEdge(i,children,childId);
     				System.out.println("ADDED NON CONDITIONAL "+childId);
     			}
     			else{
@@ -115,8 +112,8 @@ public class SimpleVisitor extends GenericVisitorAdapter<Object, Object> {
     @Override
     public Object visit(SwitchStmt s, Object arg){
     	List<Node> children = s.getChildrenNodes();
-    	System.out.println("Looking at switch: "+s.getBeginLine()+"     Children: "+children.size()+"\n");
-    	Node switchParent = s;
+    	System.out.println("Looking at: "+s.getBeginLine()+"     Children: "+children.size()+"\n");
+    	
     	for(int i=0; i<children.size(); i++){
     		Node child = children.get(i);
     		
@@ -126,15 +123,12 @@ public class SimpleVisitor extends GenericVisitorAdapter<Object, Object> {
     		String childCode = child.toStringWithoutComments();
     		
     		System.out.println("Child begin: "+childBegin+" Class: "+child.getClass().getSimpleName());
-    		if(child instanceof SwitchEntryStmt){
-    			String condition = ((SwitchEntryStmt) child).toStringWithoutComments();
-    			addEdge(Integer.toString(s.getBeginLine()),childId);
-    		}
     	}
+    	
     	return super.visit(s, arg);
     }
     
-    private void handleBreaks(Node child, List<Node> children, int i){
+    private void handleBreaks(Node child){
     	int childBegin = child.getBeginLine();
 		int childEnd = child.getEndLine();
 		String childId = Integer.toString(childBegin);
@@ -143,33 +137,27 @@ public class SimpleVisitor extends GenericVisitorAdapter<Object, Object> {
     		String condition = ((AssertStmt) child).toStringWithoutComments();
 			childEnd = ((AssertStmt) child).getEndLine();
 			addNode(childBegin, childEnd, childId, condition);
-			checkEdge(i,children,childId);
 		}
 		else if(child instanceof BreakStmt){
 			addNode(childBegin, childEnd, childId, "break;");
-			checkEdge(i,children,childId);
 		}
 		else if(child instanceof TryStmt){
 			addNode(childBegin, childEnd, childId, "try");
-			checkEdge(i,children,childId);
 		}
 		else if(child instanceof CatchClause){
 			String parameters = ((CatchClause) child).getParam().toStringWithoutComments();
 			addNode(childBegin, childEnd, childId, "catch("+parameters+")");
-			checkEdge(i,children,childId);
 		}
 		else if(child instanceof ContinueStmt){
 			addNode(childBegin, childEnd, childId, "continue");
-			checkEdge(i,children,childId);
 		}
 		else if(child instanceof LabeledStmt){
 			String label = ((LabeledStmt) child).getLabel();
 			addNode(childBegin, childEnd, childId, label);
-			checkEdge(i,children,childId);
 		}
 	}
 
-	private void handleConditionals(Node child, List<Node> children, int i){
+	private void handleConditionals(Node child){
     	int childBegin = child.getBeginLine();
 		int childEnd = child.getEndLine();
 		String childId = Integer.toString(childBegin);
@@ -178,12 +166,10 @@ public class SimpleVisitor extends GenericVisitorAdapter<Object, Object> {
     		String condition = ((IfStmt) child).getCondition().toStringWithoutComments();
 			childEnd = ((IfStmt) child).getCondition().getEndLine();
 			addNode(childBegin, childEnd, childId, "if("+condition+")");
-			checkEdge(i,children,childId);
 		}
 		else if(child instanceof DoStmt){
 			String condition = ((DoStmt) child).getCondition().toStringWithoutComments();
 			addNode(childBegin, childEnd, childId, "do{...}while("+condition+");");
-			checkEdge(i,children,childId);
 		}
 		else if(child instanceof ForStmt){
 			String condition = ((ForStmt) child).getCompare().toStringWithoutComments();
@@ -198,30 +184,25 @@ public class SimpleVisitor extends GenericVisitorAdapter<Object, Object> {
 				updates+=update.toStringWithoutComments();
 			}
 			addNode(childBegin, childEnd, childId, "for("+initializations+"; "+condition+"; "+updates+")");
-			checkEdge(i,children,childId);
 		}
 		else if(child instanceof ForeachStmt){
 			String condition = ((ForeachStmt) child).getIterable().toStringWithoutComments();
 			addNode(childBegin, childEnd, childId, "foreach("+condition+")");
-			checkEdge(i,children,childId);
 		}
 		else if(child instanceof WhileStmt){
 			String condition = ((WhileStmt) child).getCondition().toStringWithoutComments();
 			addNode(childBegin, childEnd, childId, "foreach("+condition+")");
-			checkEdge(i,children,childId);
 		}
 		else if(child instanceof SwitchStmt){
 			String condition = ((SwitchStmt) child).getSelector().toStringWithoutComments();
 //			List<SwitchEntryStmt> entryStmts = ((SwitchStmt) child).getEntries();
 			addNode(childBegin, childEnd, childId, "switch("+condition+")");
-			checkEdge(i,children,childId);
 			visit((SwitchStmt) child, null);
 		}
 		else if(child instanceof SwitchEntryStmt){
 			System.out.println("-------------------------SWITCH ENTRY STATEMENT FOUND");
 			String condition = ((SwitchEntryStmt) child).getLabel().toStringWithoutComments();
 			addNode(childBegin, childEnd, childId, "case "+condition+":");
-			checkEdge(i,children,childId);
 		}
     }
     
@@ -229,17 +210,6 @@ public class SimpleVisitor extends GenericVisitorAdapter<Object, Object> {
     	this.cfg.addNode(begin, end, nodeId, code);
     }
 
-    private void addEdge(String from, String to){
-    	this.cfg.addEdge(from,to);
-    }
-    
-    private void checkEdge(int i, List<Node> parent, String childBegin){
-    	if(i>0)
-    		addEdge(Integer.toString(parent.get(i-1).getParentNode().getBeginLine()),childBegin);
-		else
-			addEdge(Integer.toString(parent.get(0).getBeginLine()),childBegin);
-    }
-    
 	public CFG returnCFG(CompilationUnit cu, Object arg){
     	visit(cu, arg);
     	return this.cfg;

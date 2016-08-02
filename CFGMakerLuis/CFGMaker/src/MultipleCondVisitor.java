@@ -124,7 +124,7 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
 //    		System.out.println("Child begin: "+childBegin+" Class: "+child.getClass().getSimpleName());
     		if(child instanceof SwitchEntryStmt){
     			String condition = ((SwitchEntryStmt) child).toStringWithoutComments();
-    			checkStmt(condition,childBegin,childEnd,childId,"case(");
+    			checkStmt(condition,childBegin,childEnd,childId,child);
     			addEdge(Integer.toString(s.getBeginLine()),childId);
     		}
     	}
@@ -175,12 +175,12 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
     	if(child instanceof IfStmt){
     		String condition = ((IfStmt) child).getCondition().toStringWithoutComments();
 			childEnd = ((IfStmt) child).getCondition().getEndLine();
-			checkStmt(condition,childBegin,childEnd,childId,"if(");
+			checkStmt(condition,childBegin,childEnd,childId,child);
 			checkEdge(i,children,childId);
     	}
 		else if(child instanceof DoStmt){
 			String condition = ((DoStmt) child).getCondition().toStringWithoutComments();
-			checkStmt(condition,childBegin,childEnd,childId,"do{...}while(");
+			checkStmt(condition,childBegin,childEnd,childId,child);
 			checkEdge(i,children,childId);
 		}
 		else if(child instanceof ForStmt){
@@ -195,30 +195,33 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
 			for(Expression update : updatesList){
 				updates+=update.toStringWithoutComments();
 			}
-			checkStmt(condition,childBegin,childEnd,childId,"for(");
+			checkStmt(condition,childBegin,childEnd,childId,child);
 			checkEdge(i,children,childId);
 		}
 		else if(child instanceof ForeachStmt){
 			String condition = ((ForeachStmt) child).getIterable().toStringWithoutComments();
-			checkStmt(condition,childBegin,childEnd,childId,"foreach(");
+			checkStmt(condition,childBegin,childEnd,childId,child);
 			checkEdge(i,children,childId);
 		}
 		else if(child instanceof WhileStmt){
 			String condition = ((WhileStmt) child).getCondition().toStringWithoutComments();
-			checkStmt(condition,childBegin,childEnd,childId,"while(");
+			checkStmt(condition,childBegin,childEnd,childId,child);
 			checkEdge(i,children,childId);
 		}
 		else if(child instanceof SwitchStmt){
 			String condition = ((SwitchStmt) child).getSelector().toStringWithoutComments();
 //			List<SwitchEntryStmt> entryStmts = ((SwitchStmt) child).getEntries();
-			checkStmt(condition,childBegin,childEnd,childId,"switch(");
+			checkStmt(condition,childBegin,childEnd,childId,child);
 			visit((SwitchStmt) child, null);
 		}
     }
     
-	private void checkAnd(String condition, int childBegin, int childEnd, String childId, String type){
+	private void checkAnd(String condition, int childBegin, int childEnd, String childId, Node type){
 		char[] alph = "abcdefghijklmnopqrstuvwxyz".toCharArray();
 		int ltr =0;
+		List<Node> nodes = type.getChildrenNodes();
+		String insideNode = Integer.toString(nodes.get(1).getBeginLine());
+
 //		System.out.println("AND Found in "+type+" stmt");
 		String[] children = condition.split("[&]");
 		for(int i=0; i<children.length;i++)
@@ -238,20 +241,25 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
 			}
 			
 			//add && nodes
-			if(!children[i].equals("")){
-				this.cfg.addNode(childBegin,childEnd,childId+alph[ltr],children[i]+"&&");
-				this.cfg.addNode(childBegin,childEnd,childId+alph[ltr+1],children[i+=2]+")");
-				this.cfg.addEdge(childId+alph[ltr++],childId+alph[ltr++]);
-				if(i+2<children.length&&!children[i+2].equals(""))
-					this.cfg.addEdge(childId+alph[ltr-1],childId+alph[ltr]);
+			else if(!children[i].equals("")){
+				if(i+2<children.length)
+				{
+					this.cfg.addNode(childBegin,childEnd,childId+alph[ltr],children[i]+"&&");
+					this.cfg.addNode(childBegin,childEnd,childId+alph[ltr+1],children[i+=2]+")");
+					this.cfg.addEdge(childId+alph[ltr],insideNode);
+					this.cfg.addEdge(childId+alph[ltr+1],insideNode);
+					this.cfg.addEdge(childId+alph[ltr++],childId+alph[ltr++]);
+				}
 			}
 		}
 		
 	}
 	
-	private void checkOr(String condition, int childBegin, int childEnd, String childId, String type){
+	private void checkOr(String condition, int childBegin, int childEnd, String childId, Node type){
 		char[] alph = "abcdefghijklmnopqrstuvwxyz".toCharArray();
 		int ltr = 0;
+		List<Node> nodes = type.getChildrenNodes();
+		String insideNode = Integer.toString(nodes.get(1).getBeginLine());
 //		System.out.println("OR Found in "+type+" stmt");
 		String[] children = condition.split("[|]");
 		for(int i=0; i<children.length;i++)
@@ -272,16 +280,19 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
 			
 			//add || nodes
 			if(!children[i].equals("")){
-				this.cfg.addNode(childBegin,childEnd,childId+alph[ltr],children[i]+"||");
-				this.cfg.addNode(childBegin,childEnd,childId+alph[ltr+1],children[i+=2]+")");
-				this.cfg.addEdge(childId+alph[ltr++],childId+alph[ltr++]);
-				if(i+2<children.length&&!children[i+2].equals(""))
-					this.cfg.addEdge(childId+alph[ltr-1],childId+alph[ltr]);
+				if(i+2<children.length)
+				{
+					this.cfg.addNode(childBegin,childEnd,childId+alph[ltr],children[i]+"||");
+					this.cfg.addNode(childBegin,childEnd,childId+alph[ltr+1],children[i+=2]+")");
+					this.cfg.addEdge(childId+alph[ltr],insideNode);
+					this.cfg.addEdge(childId+alph[ltr+1],insideNode);
+					this.cfg.addEdge(childId+alph[ltr++],childId+alph[ltr++]);
+				}
 			}
 		}
 	}
 	
-	private void checkStmt(String condition, int childBegin, int childEnd, String childId, String type){
+	private void checkStmt(String condition, int childBegin, int childEnd, String childId, Node type){
 		
 		if(condition.contains("||")){
 			checkOr(condition,childBegin,childEnd,childId,type);

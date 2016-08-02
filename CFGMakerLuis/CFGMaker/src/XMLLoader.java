@@ -30,6 +30,5 @@ public class XMLLoader {
 		XStream xstream = new XStream();
 		CFG cfg =(CFG)xstream.fromXML(file);
 		cfg.printNodes();	
-		cfg.printEdges();
 	}
 }
