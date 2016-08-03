@@ -54,7 +54,7 @@ public class CFG {
 			String fromId = edge.getFromNode().replaceAll(" ", "");
 			String toId = edge.getToNode().replaceAll(" ", "");
 			dotFormat += fromId + "->" + toId + "; ";
-			dotFormat += fromId + " [label=\"" + edge.getFromNode() + "\"] ";
+			dotFormat += fromId + " [label=\"" + edge.getFromNode() + "\"]; ";
 			
 		}
 		

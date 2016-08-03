@@ -73,19 +73,19 @@ public class SimpleCFGParser extends GenericVisitorAdapter<Object, Object>{
 	
 	@Override
 	public Object visit(ReturnStmt retStmt, Object arg){
-		int begin = retStmt.getBeginLine();
-		int end = retStmt.getEndLine();
+		int begin = retStmt.getBegin().line;
+		int end = retStmt.getEnd().line;
 		String nodeId = Integer.toString(begin);
 		String code = retStmt.toStringWithoutComments();
 		addNode(begin, end, nodeId, code);
-		addEdge(nodeId, Integer.toString(retStmt.getParentNode().getParentNode().getEndLine()));
+		addEdge(nodeId, Integer.toString(retStmt.getParentNode().getParentNode().getEnd().line));
 		return super.visit(retStmt, arg);
 	}
 	
 	@Override
 	public Object visit(BreakStmt breakStmt, Object arg){
-		int begin = breakStmt.getBeginLine();
-		int end = breakStmt.getEndLine();
+		int begin = breakStmt.getBegin().line;
+		int end = breakStmt.getEnd().line;
 		String nodeId = Integer.toString(begin);
 		String code = breakStmt.toStringWithoutComments();
 		addNode(begin, end, nodeId, code);
@@ -93,8 +93,8 @@ public class SimpleCFGParser extends GenericVisitorAdapter<Object, Object>{
 	}
 	
 	private String iterateThroughChildren(Node parent){
-		int parentBegin = parent.getBeginLine();
-		int parentEnd = parent.getEndLine();
+		int parentBegin = parent.getBegin().line;
+		int parentEnd = parent.getEnd().line;
 		String parentId = Integer.toString(parentBegin);
 		List<Node> children = parent.getChildrenNodes();
 		
@@ -109,8 +109,8 @@ public class SimpleCFGParser extends GenericVisitorAdapter<Object, Object>{
 		String lastChildId = "";
 		for(int i=0; i<children.size(); i++){
 			Node child = children.get(i);
-			int childBegin = child.getBeginLine();
-			int childEnd = child.getEndLine();
+			int childBegin = child.getBegin().line;
+			int childEnd = child.getEnd().line;
 			String childId = Integer.toString(childBegin);
 			String childCode = child.toStringWithoutComments();
 			
@@ -188,8 +188,8 @@ public class SimpleCFGParser extends GenericVisitorAdapter<Object, Object>{
 	
 	@Override
 	public Object visit(MethodDeclaration methodDecl, Object arg){
-		int begin = methodDecl.getBeginLine();
-		int end = methodDecl.getEndLine();
+		int begin = methodDecl.getBegin().line;
+		int end = methodDecl.getEnd().line;
 		String nodeId = Integer.toString(begin);
 		String code = methodDecl.getDeclarationAsString();
 		
@@ -200,8 +200,8 @@ public class SimpleCFGParser extends GenericVisitorAdapter<Object, Object>{
 	
 	@Override
 	public Object visit(BlockStmt blockStmt, Object arg){
-		int begin = blockStmt.getBeginLine();
-		int end = blockStmt.getEndLine();
+		int begin = blockStmt.getBegin().line;
+		int end = blockStmt.getEnd().line;
 		
 		List<Node> children = blockStmt.getChildrenNodes();
 		
@@ -209,7 +209,7 @@ public class SimpleCFGParser extends GenericVisitorAdapter<Object, Object>{
 		if(children.get(children.size()-1) instanceof ExpressionStmt){
 			addEdge(lastChildId, Integer.toString(end));
 		}
-		addEdge(Integer.toString(end), Integer.toString(blockStmt.getParentNode().getParentNode().getEndLine()));
+		addEdge(Integer.toString(end), Integer.toString(blockStmt.getParentNode().getParentNode().getEnd().line));
 		
 		return super.visit(blockStmt, arg);
 	}
@@ -217,8 +217,8 @@ public class SimpleCFGParser extends GenericVisitorAdapter<Object, Object>{
 	@Override
 	public Object visit(IfStmt ifStmt, Object arg){
 		Expression condition = ifStmt.getCondition();
-		int begin = condition.getBeginLine();
-		int end = condition.getEndLine();
+		int begin = condition.getBegin().line;
+		int end = condition.getEnd().line;
 		String nodeId = Integer.toString(begin);
 		String code = "if("+condition.toStringWithoutComments()+")";
 		
@@ -230,7 +230,7 @@ public class SimpleCFGParser extends GenericVisitorAdapter<Object, Object>{
 		
 		Statement elseStmt = ifStmt.getElseStmt();
 		if(elseStmt != null){
-			addEdge(nodeId, Integer.toString(elseStmt.getBeginLine()));
+			addEdge(nodeId, Integer.toString(elseStmt.getBegin().line));
 		}
 		
 		return super.visit(ifStmt, arg);
@@ -238,8 +238,8 @@ public class SimpleCFGParser extends GenericVisitorAdapter<Object, Object>{
 	
 	@Override
 	public Object visit(ForStmt forStmt, Object arg){
-		int begin = forStmt.getBeginLine();
-		int end = forStmt.getEndLine();
+		int begin = forStmt.getBegin().line;
+		int end = forStmt.getEnd().line;
 		String nodeId = Integer.toString(begin);
 		String initialization = "";
 		for(Expression init : forStmt.getInit()){
@@ -265,14 +265,14 @@ public class SimpleCFGParser extends GenericVisitorAdapter<Object, Object>{
 	@Override
 	public Object visit(SwitchStmt s, Object arg){
 		List<Node> children = s.getChildrenNodes();
-		int begin = s.getBeginLine();
+		int begin = s.getBegin().line;
 		
 		for(int i=0; i<children.size(); i++){
 			Node child = children.get(i);
 			
 			if(child instanceof SwitchEntryStmt){
-				int childBegin = child.getBeginLine();
-				int childEnd = child.getEndLine();
+				int childBegin = child.getBegin().line;
+				int childEnd = child.getEnd().line;
 				String childId = Integer.toString(childBegin);
 				Expression label = ((SwitchEntryStmt) child).getLabel();
 				String childCode  = "default";
@@ -290,8 +290,8 @@ public class SimpleCFGParser extends GenericVisitorAdapter<Object, Object>{
 	
 	@Override
 	public Object visit(TryStmt tryStmt, Object arg){
-		int begin = tryStmt.getBeginLine();
-		int end = tryStmt.getEndLine();
+		int begin = tryStmt.getBegin().line;
+		int end = tryStmt.getEnd().line;
 		String nodeId = Integer.toString(begin);
 		String code = "try";
 		
@@ -299,7 +299,7 @@ public class SimpleCFGParser extends GenericVisitorAdapter<Object, Object>{
 		
 		List<CatchClause> catchStmts = tryStmt.getCatchs();
 		for(CatchClause catchStmt : catchStmts){
-			addEdge(nodeId, Integer.toString(catchStmt.getBeginLine()));
+			addEdge(nodeId, Integer.toString(catchStmt.getBegin().line));
 		}
 		return super.visit(tryStmt, arg);
 	}

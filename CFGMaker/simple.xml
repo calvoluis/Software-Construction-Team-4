@@ -1,0 +1,125 @@
+<CFG>
+  <nodes class="linked-list">
+    <CFGNode>
+      <nodeId>5</nodeId>
+      <beginLine>5</beginLine>
+      <endLine>26</endLine>
+      <representedCode>public static void main(String[] args)</representedCode>
+    </CFGNode>
+    <CFGNode>
+      <nodeId>7 8 10 11 12 13 14</nodeId>
+      <beginLine>7</beginLine>
+      <endLine>14</endLine>
+      <representedCode>System.out.println(&quot;Please put in coordinates for rectangles&quot;);
+System.out.println(&quot;(x1 y1 x2 y2 x3 y3 x4 y4)&quot;);
+Scanner in = new Scanner(System.in);
+String input = in.nextLine();
+in.close();
+input = input.trim();
+String[] inputArray = input.split(&quot; &quot;);</representedCode>
+    </CFGNode>
+    <CFGNode>
+      <nodeId>15</nodeId>
+      <beginLine>15</beginLine>
+      <endLine>15</endLine>
+      <representedCode>if(inputArray.length != 8 &amp;&amp; true)</representedCode>
+    </CFGNode>
+    <CFGNode>
+      <nodeId>16</nodeId>
+      <beginLine>16</beginLine>
+      <endLine>16</endLine>
+      <representedCode>System.out.println(&quot;Invalid inputs please try again&quot;);</representedCode>
+    </CFGNode>
+    <CFGNode>
+      <nodeId>19</nodeId>
+      <beginLine>19</beginLine>
+      <endLine>19</endLine>
+      <representedCode>int[] coordinates = new int[8];</representedCode>
+    </CFGNode>
+    <CFGNode>
+      <nodeId>23 24</nodeId>
+      <beginLine>23</beginLine>
+      <endLine>24</endLine>
+      <representedCode>String overlap = checkOverlap(coordinates[0], coordinates[1], coordinates[2], coordinates[3], coordinates[4], coordinates[5], coordinates[6], coordinates[7]);
+System.out.println(overlap);</representedCode>
+    </CFGNode>
+    <CFGNode>
+      <nodeId>20</nodeId>
+      <beginLine>20</beginLine>
+      <endLine>22</endLine>
+      <representedCode>for(int i = 0; i &lt; 8; i++)</representedCode>
+    </CFGNode>
+    <CFGNode>
+      <nodeId>21</nodeId>
+      <beginLine>21</beginLine>
+      <endLine>21</endLine>
+      <representedCode>System.out.println(i + &quot; &quot;);</representedCode>
+    </CFGNode>
+  </nodes>
+  <edges class="linked-list">
+    <CFGEdge>
+      <fromNode>5</fromNode>
+      <toNode>7 8 10 11 12 13 14</toNode>
+    </CFGEdge>
+    <CFGEdge>
+      <fromNode>7 8 10 11 12 13 14</fromNode>
+      <toNode>15</toNode>
+    </CFGEdge>
+    <CFGEdge>
+      <fromNode>26</fromNode>
+      <toNode>27</toNode>
+    </CFGEdge>
+    <CFGEdge>
+      <fromNode>15</fromNode>
+      <toNode>18</toNode>
+    </CFGEdge>
+    <CFGEdge>
+      <fromNode>15</fromNode>
+      <toNode>16</toNode>
+    </CFGEdge>
+    <CFGEdge>
+      <fromNode>16</fromNode>
+      <toNode>17</toNode>
+    </CFGEdge>
+    <CFGEdge>
+      <fromNode>17</fromNode>
+      <toNode>26</toNode>
+    </CFGEdge>
+    <CFGEdge>
+      <fromNode>18</fromNode>
+      <toNode>19</toNode>
+    </CFGEdge>
+    <CFGEdge>
+      <fromNode>19</fromNode>
+      <toNode>20</toNode>
+    </CFGEdge>
+    <CFGEdge>
+      <fromNode>20</fromNode>
+      <toNode>23 24</toNode>
+    </CFGEdge>
+    <CFGEdge>
+      <fromNode>23 24</fromNode>
+      <toNode>25</toNode>
+    </CFGEdge>
+    <CFGEdge>
+      <fromNode>25</fromNode>
+      <toNode>26</toNode>
+    </CFGEdge>
+    <CFGEdge>
+      <fromNode>22</fromNode>
+      <toNode>20</toNode>
+    </CFGEdge>
+    <CFGEdge>
+      <fromNode>20</fromNode>
+      <toNode>21</toNode>
+    </CFGEdge>
+    <CFGEdge>
+      <fromNode>21</fromNode>
+      <toNode>22</toNode>
+    </CFGEdge>
+    <CFGEdge>
+      <fromNode>22</fromNode>
+      <toNode>25</toNode>
+    </CFGEdge>
+  </edges>
+</CFG>

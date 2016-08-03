@@ -101,8 +101,8 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
         return super.visit(n, arg);
     }
     
-    @Override
-    public Object visit(SwitchStmt s, Object arg){
+    
+    public Object visitSwitch(SwitchStmt s, Object arg){
     	List<Node> children = s.getChildrenNodes();
     	for(int i=0; i<children.size(); i++){
     		Node child = children.get(i);
@@ -120,8 +120,8 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
     	return super.visit(s, arg);
     }
     
-    @Override
-	public Object visit(IfStmt s, Object arg){
+    
+	public Object visitIf(IfStmt s, Object arg){
 		List<Node> children = s.getChildrenNodes();
     	Node switchParent = s;
     	for(int i=0; i<children.size(); i++){
@@ -187,7 +187,7 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
 			childEnd = ((IfStmt) child).getCondition().getEndLine();
 			checkStmt(condition,childBegin,childEnd,childId,child);
 			if(child.getChildrenNodes().get(1) instanceof ExpressionStmt){
-				visit((IfStmt)child,null);
+				visitIf((IfStmt)child,null);
 			}
 			checkEdge(i,children,childId);
     	}
@@ -223,8 +223,8 @@ public class MultipleCondVisitor extends GenericVisitorAdapter<Object, Object>{
 		}
 		else if(child instanceof SwitchStmt){
 			String condition = ((SwitchStmt) child).getSelector().toStringWithoutComments();
-			checkStmt(condition,childBegin,childEnd,childId,child);
-			visit((SwitchStmt) child, null);
+//			checkStmt(condition,childBegin,childEnd,childId,child);
+			visitSwitch((SwitchStmt) child, null);
 		}
     }
     
